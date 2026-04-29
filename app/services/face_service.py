@@ -204,23 +204,27 @@ class FaceVerificationService:
             print(f"[活体检测] 图像base64长度: {len(image_base64)}")
 
             # 调用faceverify接口 - 注意：参数必须是数组格式！
+            # 参考百度云官方示例：使用json.dumps和data发送
             url = f"https://aip.baidubce.com/rest/2.0/face/v3/faceverify"
-            # 百度云faceverify接口要求参数是数组格式，每个元素包含image和image_type
-            payload = [
+            # 百度云faceverify接口要求参数是数组格式
+            payload_dict = [
                 {
                     "image": image_base64,
                     "image_type": "BASE64",
-                    "face_field": "quality,liveness",
+                    "face_field": "liveness,quality",
                 }
             ]
+            # 使用json.dumps序列化，ensure_ascii=False支持中文
+            payload_str = json.dumps(payload_dict, ensure_ascii=False)
             params = {"access_token": access_token}
             headers = {"Content-Type": "application/json"}
 
             print(f"[活体检测] 请求URL: {url}")
             print(f"[活体检测] payload格式: 数组，包含1个元素")
-            print(f"[活体检测] payload内容: image_type=BASE64, face_field=quality,liveness")
+            print(f"[活体检测] payload内容: image_type=BASE64, face_field=liveness,quality")
 
-            response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+            # 使用data参数发送，与百度云示例代码一致
+            response = requests.post(url, data=payload_str.encode("utf-8"), params=params, headers=headers, timeout=20)
             result = response.json()
 
             print(f"[活体检测] API响应: {result}")
@@ -765,7 +769,9 @@ class FaceVerificationService:
             print(f"[人脸比对] 请求URL: {url}")
             print(f"[人脸比对] 参数数量: {len(match_params)}")
 
-            response = requests.post(url, json=match_params, params=params, headers=headers, timeout=20)
+            # 使用json.dumps和data发送，与百度云示例代码一致
+            payload_str = json.dumps(match_params, ensure_ascii=False)
+            response = requests.post(url, data=payload_str.encode("utf-8"), params=params, headers=headers, timeout=20)
             result = response.json()
 
             print(f"[人脸比对] API响应: {result}")
@@ -848,7 +854,9 @@ class FaceVerificationService:
             print(f"[人脸注册] 请求URL: {url}")
             print(f"[人脸注册] 用户ID: {user_id}, 用户组: {group_id}")
 
-            response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+            # 使用json.dumps和data发送
+            payload_str = json.dumps(payload, ensure_ascii=False)
+            response = requests.post(url, data=payload_str.encode("utf-8"), params=params, headers=headers, timeout=20)
             result = response.json()
 
             print(f"[人脸注册] API响应: {result}")
@@ -862,7 +870,8 @@ class FaceVerificationService:
                     print("[人脸注册] 用户组不存在，先创建用户组...")
                     self._create_face_group(group_id, access_token)
                     # 重新注册
-                    response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+                    payload_str = json.dumps(payload, ensure_ascii=False)
+                    response = requests.post(url, data=payload_str.encode("utf-8"), params=params, headers=headers, timeout=20)
                     result = response.json()
                     print(f"[人脸注册] 重试注册响应: {result}")
 
@@ -871,7 +880,8 @@ class FaceVerificationService:
                         if result['error_code'] == 216617:
                             print(f"[人脸注册] 用户已存在，先删除后重新注册...")
                             self._delete_face_user(user_id, group_id, access_token)
-                            response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+                            payload_str = json.dumps(payload, ensure_ascii=False)
+                            response = requests.post(url, data=payload_str.encode("utf-8"), params=params, headers=headers, timeout=20)
                             result = response.json()
                             print(f"[人脸注册] 删除后重新注册响应: {result}")
                             if 'error_code' in result and result['error_code'] != 0:
@@ -882,7 +892,8 @@ class FaceVerificationService:
                 elif error_code == 216617:  # 用户已存在
                     print(f"[人脸注册] 用户已存在，先删除后重新注册...")
                     self._delete_face_user(user_id, group_id, access_token)
-                    response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+                    payload_str = json.dumps(payload, ensure_ascii=False)
+                    response = requests.post(url, data=payload_str.encode("utf-8"), params=params, headers=headers, timeout=20)
                     result = response.json()
                     print(f"[人脸注册] 删除后重新注册响应: {result}")
                     if 'error_code' in result and result['error_code'] != 0:
@@ -932,7 +943,9 @@ class FaceVerificationService:
 
         print(f"[创建用户组] 请求URL: {url}, group_id: {group_id}")
 
-        response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+        # 使用json.dumps和data发送
+        payload_str = json.dumps(payload, ensure_ascii=False)
+        response = requests.post(url, data=payload_str.encode("utf-8"), params=params, headers=headers, timeout=20)
         result = response.json()
 
         print(f"[创建用户组] API响应: {result}")
@@ -965,7 +978,8 @@ class FaceVerificationService:
 
         print(f"[删除用户] 请求URL: {url}, user_id: {user_id}, group_id: {group_id}")
 
-        response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+        payload_str = json.dumps(payload, ensure_ascii=False)
+        response = requests.post(url, data=payload_str.encode("utf-8"), params=params, headers=headers, timeout=20)
         result = response.json()
 
         print(f"[删除用户] API响应: {result}")
@@ -1021,7 +1035,9 @@ class FaceVerificationService:
             print(f"[人脸搜索] 请求URL: {url}")
             print(f"[人脸搜索] 搜索用户组: {group_id}, 阈值: {threshold}")
 
-            response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+            # 使用json.dumps和data发送
+            payload_str = json.dumps(payload, ensure_ascii=False)
+            response = requests.post(url, data=payload_str.encode("utf-8"), params=params, headers=headers, timeout=20)
             result = response.json()
 
             print(f"[人脸搜索] API响应: {result}")
