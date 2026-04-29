@@ -713,48 +713,43 @@ class FaceVerificationService:
         """
         功能：比对两组人脸特征，调用百度云人脸比对接口。
         参数：
-            vector_a (np.ndarray): 特征向量 A（face_token字节数组或图像）。
-            vector_b (np.ndarray): 特征向量 B（face_token字节数组或图像）。
+            vector_a (np.ndarray): 人脸图像A（BGR格式）。
+            vector_b (np.ndarray): 人脸图像B（BGR格式）。
             threshold (float): 匹配阈值，默认 0.6。
         返回值：
             FaceVerificationResult: 比对结果对象。
         注意事项：
-            支持图像与图像的比对。face_token有时间限制，不适合长期存储后比对。
+            仅支持图像与图像的比对。face_token有时间限制，不适合直接比对。
         """
         try:
             # 获取access_token
             access_token = self._get_access_token()
 
-            # 构建比对参数 - 使用图像方式
-            def prepare_image_param(vector):
-                # 尝试解码为face_token
-                try:
-                    token_bytes = vector.tobytes()
-                    face_token = token_bytes.decode('utf-8')
-                    # 检查是否是有效的face_token格式（百度云face_token以特定字符开头）
-                    if len(face_token) > 20 and not face_token.startswith('legacy_'):
-                        # face_token已过期，不能用于比对，需要重新提取特征
-                        print(f"[人脸比对] face_token可能已过期: {face_token[:20]}...")
-                except:
-                    pass
-
-                # 将BGR图像转换为RGB JPEG base64
-                if vector.dtype == np.uint8 and len(vector.shape) == 3:
-                    # 这是图像
+            def prepare_image_param(vector, label):
+                # 检查是否是图像（numpy数组，3通道BGR）
+                if isinstance(vector, np.ndarray) and vector.dtype == np.uint8 and len(vector.shape) == 3 and vector.shape[2] == 3:
+                    # 这是BGR图像
+                    print(f"[人脸比对] {label}: 检测到图像，shape={vector.shape}")
                     rgb_image = cv2.cvtColor(vector, cv2.COLOR_BGR2RGB)
                     success, encoded_image = cv2.imencode('.jpg', rgb_image, [cv2.IMWRITE_JPEG_QUALITY, 95])
                     if not success:
-                        raise FaceServiceError("图像编码失败，无法进行人脸比对。")
+                        raise FaceServiceError(f"{label}图像编码失败，无法进行人脸比对。")
                     image_bytes = encoded_image.tobytes()
                     image_base64 = base64.b64encode(image_bytes).decode('utf-8')
                     return {'image': image_base64, 'image_type': 'BASE64'}
                 else:
-                    # 这是face_token字节数组，尝试解码并重新提取人脸
-                    # 由于face_token会过期，我们需要从原始图像重新提取
-                    raise FaceServiceError("存储的人脸特征已过期，需要重新注册。")
+                    # 可能是face_token字节数组，尝试解码
+                    try:
+                        token_bytes = vector.tobytes()
+                        face_token = token_bytes.decode('utf-8')
+                        print(f"[人脸比对] {label}: 检测到face_token: {face_token[:20]}...")
+                        # face_token不能直接用于match接口，需要重新从图像提取
+                        raise FaceServiceError(f"{label}是face_token而非图像，face_token无法直接用于比对。请传入原始图像。")
+                    except Exception as e:
+                        raise FaceServiceError(f"{label}格式错误，无法识别为有效的人脸数据: {e}")
 
-            param_a = prepare_image_param(vector_a)
-            param_b = prepare_image_param(vector_b)
+            param_a = prepare_image_param(vector_a, "vector_a")
+            param_b = prepare_image_param(vector_b, "vector_b")
 
             # 调用百度云人脸比对接口
             url = f"https://aip.baidubce.com/rest/2.0/face/v3/match"
@@ -867,6 +862,25 @@ class FaceVerificationService:
                     print(f"[人脸注册] 重试注册响应: {result}")
 
                     if 'error_code' in result and result['error_code'] != 0:
+                        # 如果是用户已存在错误，先删除再重新注册
+                        if result['error_code'] == 216617:
+                            print(f"[人脸注册] 用户已存在，先删除后重新注册...")
+                            self._delete_face_user(user_id, group_id, access_token)
+                            response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+                            result = response.json()
+                            print(f"[人脸注册] 删除后重新注册响应: {result}")
+                            if 'error_code' in result and result['error_code'] != 0:
+                                raise FaceServiceError(f"人脸注册失败: {result.get('error_msg', '未知错误')}")
+                        else:
+                            raise FaceServiceError(f"人脸注册失败: {result.get('error_msg', '未知错误')}")
+
+                elif error_code == 216617:  # 用户已存在
+                    print(f"[人脸注册] 用户已存在，先删除后重新注册...")
+                    self._delete_face_user(user_id, group_id, access_token)
+                    response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+                    result = response.json()
+                    print(f"[人脸注册] 删除后重新注册响应: {result}")
+                    if 'error_code' in result and result['error_code'] != 0:
                         raise FaceServiceError(f"人脸注册失败: {result.get('error_msg', '未知错误')}")
 
                 elif error_code == 222202:
@@ -923,6 +937,41 @@ class FaceVerificationService:
             raise FaceServiceError(f"创建用户组失败: {error_msg}")
 
         print(f"[创建用户组] 成功创建用户组: {group_id}")
+
+    def _delete_face_user(self, user_id: str, group_id: str, access_token: str) -> None:
+        """
+        功能：删除百度云人脸用户组中的用户。
+        参数：
+            user_id (str): 用户ID。
+            group_id (str): 用户组ID。
+            access_token (str): API访问令牌。
+        返回值：
+            None
+        注意事项：
+            内部方法，用于在用户重新注册时先删除旧记录。
+        """
+        url = f"https://aip.baidubce.com/rest/2.0/face/v3/faceset/user/delete"
+        payload = {
+            "group_id": group_id,
+            "user_id": user_id,
+        }
+        params = {"access_token": access_token}
+        headers = {"Content-Type": "application/json"}
+
+        print(f"[删除用户] 请求URL: {url}, user_id: {user_id}, group_id: {group_id}")
+
+        response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+        result = response.json()
+
+        print(f"[删除用户] API响应: {result}")
+
+        # 用户不存在也算成功
+        if 'error_code' in result and result['error_code'] not in [0, 216618]:
+            error_msg = result.get('error_msg', '未知错误')
+            print(f"[删除用户] 错误: {error_msg}")
+            # 不抛出异常，继续尝试注册
+
+        print(f"[删除用户] 完成")
 
     def search_face_in_group(self, image_bgr: np.ndarray, group_id: str = "registered_users", threshold: float = 0.6) -> dict:
         """

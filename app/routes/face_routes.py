@@ -571,18 +571,23 @@ def face_liveness_video_check():
     功能：验证人脸活体检测和一致性（第二步完成时调用）。
     参数：
         base_photo_data: 基础人脸照片DataURL。
-        neutral_image_data: 活体检测帧DataURL。
+        liveness_frame_data: 活体检测帧DataURL（与face_liveness_match_check保持一致）。
     返回值：
         Response: JSON 结果。
     注意事项：
         1. 调用百度云faceverify接口进行活体检测。
-        2. 将活体检测人脸与基础人脸进行1:1比对（阈值0.7）。
+        2. 将活体检测人脸与基础人脸进行1:1比对（阈值0.6）。
         所有验证通过后返回success。
     """
+    # 兼容两种参数名称
     base_photo_data = request.form.get("base_photo_data", "").strip()
+    liveness_frame_data = request.form.get("liveness_frame_data", "").strip()
     neutral_image_data = request.form.get("neutral_image_data", "").strip()
 
-    if not base_photo_data or not neutral_image_data:
+    # 优先使用liveness_frame_data，如果没有则使用neutral_image_data
+    liveness_data = liveness_frame_data if liveness_frame_data else neutral_image_data
+
+    if not base_photo_data or not liveness_data:
         return jsonify({"status": "error", "message": "图像数据不完整，请重新完成人脸采集。"}), 400
 
     customer_id = str(session.get("account_id") or "").strip()
@@ -592,10 +597,10 @@ def face_liveness_video_check():
 
         # 解码图像
         base_photo_image = service.decode_data_url_image(base_photo_data)
-        neutral_image = service.decode_data_url_image(neutral_image_data)
+        liveness_image = service.decode_data_url_image(liveness_data)
 
         # 调用百度云活体检测接口
-        liveness_result = service.verify_face_liveness(neutral_image)
+        liveness_result = service.verify_face_liveness(liveness_image)
         current_app.logger.info(f"活体检测结果: {liveness_result}")
 
         if not liveness_result.get("face_present", False):
@@ -620,17 +625,8 @@ def face_liveness_video_check():
 
         # 人脸一致性比对（使用百度云1:1比对）
         consistency_threshold = 0.6
-        try:
-            # 提取基础人脸特征
-            base_encoding = service.extract_face_encoding(base_photo_image)
-            # 提取活体帧人脸特征
-            neutral_encoding = service.extract_face_encoding(neutral_image)
-            # 比对两帧人脸
-            consistency_result = service.compare_feature_vectors(base_encoding, neutral_encoding, consistency_threshold)
-        except FaceServiceError as e:
-            current_app.logger.warning(f"人脸比对失败，尝试使用图像直接比对: {e}")
-            # 如果提取特征失败，尝试直接用图像比对
-            consistency_result = service.compare_feature_vectors(base_photo_image, neutral_image, consistency_threshold)
+        # 直接使用图像进行比对（不使用face_token，因为face_token会过期）
+        consistency_result = service.compare_feature_vectors(base_photo_image, liveness_image, consistency_threshold)
 
         current_app.logger.info(f"人脸一致性比对结果: similarity={consistency_result.similarity}, is_match={consistency_result.is_match}")
 
@@ -751,17 +747,8 @@ def face_liveness_match_check():
 
         # 人脸一致性比对（使用百度云1:1比对）
         consistency_threshold = 0.6
-        try:
-            # 提取基础人脸特征
-            base_encoding = service.extract_face_encoding(base_photo_image)
-            # 提取活体帧人脸特征
-            liveness_encoding = service.extract_face_encoding(liveness_image)
-            # 比对两帧人脸
-            consistency_result = service.compare_feature_vectors(base_encoding, liveness_encoding, consistency_threshold)
-        except FaceServiceError as e:
-            current_app.logger.warning(f"人脸特征提取失败，尝试使用图像直接比对: {e}")
-            # 如果提取特征失败，尝试直接用图像比对
-            consistency_result = service.compare_feature_vectors(base_photo_image, liveness_image, consistency_threshold)
+        # 直接使用图像进行比对（不使用face_token，因为face_token会过期）
+        consistency_result = service.compare_feature_vectors(base_photo_image, liveness_image, consistency_threshold)
 
         current_app.logger.info(f"人脸一致性比对结果: similarity={consistency_result.similarity}, is_match={consistency_result.is_match}")
 
