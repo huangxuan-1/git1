@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% set show_app_shell = true %}
+{% set active_nav = "profile" %}
+{% set page_heading = "双因子认证：第三步 指纹验证" %}
+{% set page_subheading = "账号：" ~ username ~ "。请上传指纹图片完成最终认证（阈值 " ~ threshold ~ "）。" %}
+
+{% block page_title %}双因子认证 - 指纹验证{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mfa.css') }}">
+{% endblock %}
+
+{% block content %}
+    <main class="panel-card">
+        <section class="mfa-card">
+            <h2>上传指纹图片</h2>
+            <form method="post" action="{{ url_for('auth.fingerprint_verify_step') }}" enctype="multipart/form-data" class="mfa-form">
+                <label for="fingerprint_image_file">指纹图片</label>
+                <input id="fingerprint_image_file" name="fingerprint_image_file" type="file" accept="image/*" required>
+
+                <div class="button-row top-gap">
+                    <button type="submit" class="btn btn-primary">提交指纹验证</button>
+                </div>
+            </form>
+        </section>
+    </main>
+{% endblock %}

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile app/services/face_service.py)",
+      "Bash(python -m py_compile config.py)",
+      "Bash(python -m py_compile app/routes/face_routes.py)",
+      "Bash(pip show *)",
+      "Bash(pip install *)",
+      "Bash(C:\\\\Users\\\\xuanh\\\\AppData\\\\Local\\\\anaconda3\\\\envs\\\\classified_system_env\\\\Scripts\\\\pip install *)",
+      "Bash(conda activate *)",
+      "Bash(pip uninstall *)",
+      "Bash(curl -s http://127.0.0.1:5000/face)",
+      "Bash(curl -s -X POST http://127.0.0.1:5000/face/quality/check -F \"base_photo_data=test\")",
+      "Bash(curl -s -X POST http://127.0.0.1:5000/face/quality/check -H 'Content-Type: multipart/form-data' -H 'Cookie: session=test' -F 'base_photo_data=data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMCwsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AVN//2gAIAQIAAD8AVN//2gAIAQMAAD8AVN//Z')",
+      "Bash(dir *.py /b)",
+      "Bash(python -c \"from app.services.face_service import FaceVerificationService; print\\('FaceService import OK'\\)\")",
+      "Bash(python -c \"from app import create_app; app = create_app\\(\\); print\\('App created successfully'\\)\")",
+      "Bash(C:\\\\Users\\\\xuanh\\\\AppData\\\\Local\\\\anaconda3\\\\envs\\\\classified_system_env\\\\python.exe -c \"from app import create_app; app = create_app\\(\\); print\\('App created successfully'\\)\")",
+      "Bash(/c/Users/xuanh/AppData/Local/anaconda3/envs/classified_system_env/python.exe -c \"from app import create_app; app = create_app\\(\\); print\\('App created successfully'\\)\")"
+    ]
+  }
+}

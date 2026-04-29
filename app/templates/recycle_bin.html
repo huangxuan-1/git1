@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% set active_nav = "recycle" %}
+
+{% block page_title %}回收站{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/file_module.css') }}">
+{% endblock %}
+
+{% block content %}
+    <section class="panel-card file-panel">
+        <h2>回收站</h2>
+
+        <div class="recycle-tabs" role="tablist" aria-label="回收站标签">
+            <a class="recycle-tab{% if current_tab == 'files' %} is-active{% endif %}"
+               role="tab"
+               aria-selected="{{ 'true' if current_tab == 'files' else 'false' }}"
+               href="{{ url_for('file.recycle_bin_page', tab='files') }}">文件回收站</a>
+            <a class="recycle-tab{% if current_tab == 'users' %} is-active{% endif %}"
+               role="tab"
+               aria-selected="{{ 'true' if current_tab == 'users' else 'false' }}"
+               href="{{ url_for('file.recycle_bin_page', tab='users') }}">用户回收站</a>
+        </div>
+
+        {% if current_tab == 'files' %}
+            <div class="table-wrap table-container">
+                <table class="module-file-table recycle-file-table">
+                    <thead>
+                        <tr>
+                            <th>名称</th>
+                            <th>类型</th>
+                            <th>原位置</th>
+                            <th>删除时间</th>
+                            <th>删除者</th>
+                            <th>大小</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recycle_file_rows %}
+                            {% for item in recycle_file_rows %}
+                                <tr>
+                                    <td class="recycle-name-cell">{{ item.name }}</td>
+                                    <td>{{ '文件夹' if item.is_folder else '文件' }}</td>
+                                    <td class="recycle-path-cell">{{ item.original_path }}</td>
+                                    <td>{{ item.deleted_at.strftime('%Y-%m-%d %H:%M:%S') if item.deleted_at else '--' }}</td>
+                                    <td>{{ item.deleted_by }}</td>
+                                    <td>{{ item.size_text }}</td>
+                                    <td>
+                                        <div class="inline-actions">
+                                            <form method="post" action="{{ url_for('file.recycle_file_restore_submit', item_id=item.id) }}" class="inline-form">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-secondary">还原</button>
+                                            </form>
+                                            <form method="post"
+                                                  action="{{ url_for('file.recycle_file_purge_submit', item_id=item.id) }}"
+                                                  class="inline-form progress-form"
+                                                  data-confirm-text="确定要彻底删除该文件吗？此操作不可撤销">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-primary">彻底删除</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="empty-cell">文件回收站为空</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="table-wrap table-container">
+                <table class="module-file-table recycle-user-table">
+                    <thead>
+                        <tr>
+                            <th>原用户ID</th>
+                            <th>用户名</th>
+                            <th>姓名</th>
+                            <th>原安全级别</th>
+                            <th>删除时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recycle_user_rows %}
+                            {% for user in recycle_user_rows %}
+                                <tr>
+                                    <td>{{ user.id }}</td>
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.name }}</td>
+                                    <td>{{ user.security_level }}</td>
+                                    <td>{{ user.deleted_at.strftime('%Y-%m-%d %H:%M:%S') if user.deleted_at else '--' }}</td>
+                                    <td>
+                                        <div class="inline-actions">
+                                            <form method="post" action="{{ url_for('abac.restore_user', user_id=user.id) }}" class="inline-form">
+                                                <button type="submit" class="btn btn-secondary">还原</button>
+                                            </form>
+                                            <form method="post"
+                                                  action="{{ url_for('abac.purge_user', user_id=user.id) }}"
+                                                  class="inline-form progress-form"
+                                                  data-confirm-text="确定要彻底删除该用户吗？此操作不可撤销">
+                                                <button type="submit" class="btn btn-primary">彻底删除</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="empty-cell">用户回收站为空</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+
+    <div id="cryptoProgressPanel" class="crypto-progress-panel is-hidden" aria-live="polite" aria-atomic="true">
+        <div class="crypto-progress-card">
+            <p id="cryptoProgressText">正在处理...</p>
+            <div class="crypto-progress-track">
+                <div id="cryptoProgressBar" class="crypto-progress-bar"></div>
+            </div>
+            <span id="cryptoProgressPercent">0%</span>
+        </div>
+    </div>
+{% endblock %}
+
+{% block page_js %}
+    <script src="{{ url_for('static', filename='js/file_module.js') }}" defer></script>
+{% endblock %}

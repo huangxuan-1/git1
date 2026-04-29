@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment files
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Flask
+instance/*
+!instance/.gitkeep
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# File encryption keys
+keys/*
+!keys/.gitkeep
+
+# Tests and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db

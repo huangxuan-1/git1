@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% set active_nav = "profile" %}
+
+{% block page_title %}人脸识别管理{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/face.css') }}">
+    <!-- MediaPipe 人脸检测库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.4.1633559619/camera_utils.js"></script>
+{% endblock %}
+
+{% block content %}
+    <main class="panel-card face-main-grid{% if onboarding_required %} is-onboarding{% endif %}" id="faceRegisterPage">
+        <section class="face-card face-register-card">
+            <h2 class="face-title">{{ '人脸录入' if onboarding_required else ('更新人脸特征' if has_face_feature else '注册人脸特征') }}</h2>
+
+            <form method="post"
+                  action="{{ url_for('face.face_update_submit') if has_face_feature else url_for('face.face_register_submit') }}"
+                  id="register-form"
+                  data-liveness-url="{{ url_for('face.face_liveness_analyze') }}"
+                  data-quality-url="{{ url_for('face.face_quality_check') }}"
+                  data-match-url="{{ url_for('face.face_liveness_match_check') }}"
+                  enctype="multipart/form-data">
+
+                <!-- 第一步：基础人脸采集 -->
+                <div class="face-section" id="step-base-face">
+                    <div class="section-title">第一步：采集基础人脸照片</div>
+                    <p class="section-desc">上传或拍摄一张清晰的正面人脸照片</p>
+
+                    <div class="base-face-tabs">
+                        <button type="button" class="tab-btn active" id="tab-upload">上传照片</button>
+                        <button type="button" class="tab-btn" id="tab-camera">摄像头采集</button>
+                    </div>
+
+                    <!-- 上传方式 -->
+                    <div class="tab-content active" id="content-upload">
+                        <input type="file" accept="image/*" class="file-input" id="base_photo_file_input">
+                        <p class="file-tip">支持 JPG、PNG 格式</p>
+                        <div class="preview-box" id="upload-preview">
+                            <img id="base_photo_upload_img" alt="预览">
+                            <span class="preview-placeholder">点击上方选择照片</span>
+                        </div>
+                    </div>
+
+                    <!-- 摄像头方式 -->
+                    <div class="tab-content" id="content-camera">
+                        <div class="video-box">
+                            <video id="base-camera-video" autoplay playsinline muted></video>
+                            <div class="video-placeholder" id="base-video-placeholder">
+                                <span>点击下方按钮开启摄像头</span>
+                            </div>
+                        </div>
+                        <div class="camera-controls">
+                            <button type="button" class="btn btn-secondary" id="base-camera-start">开启摄像头</button>
+                            <button type="button" class="btn btn-secondary" id="base-camera-capture" disabled>采集照片</button>
+                            <button type="button" class="btn btn-secondary hidden" id="base-camera-stop">关闭摄像头</button>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="base_photo_data" name="base_photo_data">
+                    <input type="hidden" id="base_face_token" name="base_face_token">
+
+                    <!-- 错误提示 -->
+                    <div class="error-box hidden" id="error-box">
+                        <span class="error-text" id="error-text"></span>
+                    </div>
+
+                    <!-- 第一步按钮 -->
+                    <div class="section-footer">
+                        <button type="button" class="btn btn-primary btn-wide" id="confirm-base-photo" disabled>确认基础人脸</button>
+                    </div>
+                </div>
+
+                <!-- 第二步：人脸一致性验证 -->
+                <div class="face-section hidden" id="step-liveness">
+                    <div class="section-title">第二步：人脸一致性验证</div>
+                    <p class="section-desc" id="liveness-guide">请将面部对准画面中心，系统将自动采集人脸并进行1:1比对</p>
+
+                    <input type="hidden" id="liveness_frame_data" name="liveness_frame_data">
+                    <input type="hidden" id="liveness_passed" name="liveness_passed" value="false">
+
+                    <!-- 摄像头画面 -->
+                    <div class="video-box liveness-video-box">
+                        <video id="liveness-video" autoplay playsinline muted></video>
+                        <div class="guide-overlay">
+                            <div class="guide-frame"></div>
+                        </div>
+                        <div class="liveness-status-overlay" id="liveness-status-overlay">
+                            <span id="liveness-action-text">准备开始</span>
+                        </div>
+                    </div>
+
+                    <!-- 第二步按钮 -->
+                    <div class="section-footer">
+                        <button type="button" class="btn btn-primary btn-wide" id="start-liveness">开始人脸验证</button>
+                        <button type="button" class="btn btn-secondary btn-wide hidden" id="restart-liveness">重新验证</button>
+                    </div>
+                </div>
+
+                <!-- 完成提示 -->
+                <div class="face-section hidden" id="step-complete">
+                    <div class="section-title">人脸录入完成</div>
+                    <div class="success-box">
+                        <span class="success-icon">&#10003;</span>
+                        <p class="success-text">人脸录入验证通过</p>
+                        <p class="success-desc">质量检测、人脸一致性比对均已通过</p>
+                    </div>
+                    <div class="section-footer">
+                        <button type="submit" class="btn btn-primary btn-wide" id="final-submit-btn">保存人脸模板</button>
+                    </div>
+                </div>
+
+                {% if onboarding_required %}
+                    <div class="section-footer">
+                        <a href="{{ url_for('auth.biometric_onboarding_guide') }}" class="btn btn-secondary">返回引导页</a>
+                    </div>
+                {% endif %}
+            </form>
+        </section>
+
+        {% if not onboarding_required %}
+            <section class="face-card face-verify-card">
+                <h2 class="face-title">人脸特征比对</h2>
+                <p class="section-desc">验证人脸与已录入模板的匹配度，阈值 {{ match_threshold }}</p>
+
+                <form method="post" action="{{ url_for('face.face_verify_submit') }}" enctype="multipart/form-data" id="verify-form">
+                    <div class="base-face-tabs">
+                        <button type="button" class="tab-btn active" data-tab="verify-upload">上传照片</button>
+                        <button type="button" class="tab-btn" data-tab="verify-camera">摄像头采集</button>
+                    </div>
+
+                    <div class="tab-content active" id="verify-upload">
+                        <input type="file" name="verify_image_file" accept="image/*" class="file-input">
+                        <p class="file-tip">支持 JPG、PNG 格式</p>
+                    </div>
+
+                    <div class="tab-content" id="verify-camera">
+                        <div class="video-box small-video">
+                            <video id="verify-video" autoplay playsinline muted></video>
+                        </div>
+                        <div class="camera-controls">
+                            <button type="button" class="btn btn-secondary" id="verify-camera-start">开启摄像头</button>
+                            <button type="button" class="btn btn-secondary" id="verify-camera-stop">关闭摄像头</button>
+                        </div>
+                        <div class="preview-box" id="verify-preview">
+                            <img id="verify_preview_img" alt="预览">
+                            <span class="preview-placeholder">点击采集比对图像</span>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="verify-capture" disabled>采集比对图像</button>
+                    </div>
+
+                    <input type="hidden" id="verify_image_data" name="verify_image_data">
+
+                    <div class="section-footer">
+                        <button type="submit" class="btn btn-primary btn-wide">执行人脸比对</button>
+                    </div>
+                </form>
+
+                {% if verify_result %}
+                    <div class="verify-result {{ 'success' if verify_result.is_match else 'failed' }}">
+                        <p>相似度：{{ '%.6f'|format(verify_result.similarity) }}</p>
+                        <p>阈值：{{ '%.2f'|format(match_threshold) }}</p>
+                        <p>{{ '匹配通过' if verify_result.is_match else '匹配失败' }}</p>
+                    </div>
+                {% endif %}
+            </section>
+        {% endif %}
+    </main>
+
+    {% if not onboarding_required %}
+        <div class="panel-card panel-footer-row">
+            <a href="{{ url_for('auth.profile_page') }}" class="btn btn-secondary">返回个人中心</a>
+            <a href="{{ url_for('file.file_list_page') }}" class="btn btn-secondary">返回文件页</a>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block page_js %}
+    <script src="{{ url_for('static', filename='js/face_register_liveness.js') }}" defer></script>
+{% endblock %}

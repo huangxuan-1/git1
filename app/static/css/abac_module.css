@@ -1,0 +1,262 @@
+/* === 系统设置页面布局 === */
+.settings-main-panel {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* toolbar行：三元素布局 - 左中右 */
+.settings-main-panel .settings-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #3b82f6;
+    position: relative;
+}
+
+/* 标签页按钮组在最左侧 */
+.settings-main-panel .settings-toolbar .settings-tabs {
+    order: 1;
+    flex-shrink: 0;
+}
+
+/* 内容大标题在整行正中间，绝对定位居中 */
+.settings-main-panel .settings-toolbar h2 {
+    order: 2;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+}
+
+/* 添加用户按钮在最右侧 */
+.settings-main-panel .settings-toolbar .btn {
+    order: 3;
+    flex-shrink: 0;
+    margin-left: 0;
+}
+
+/* 标签页按钮组样式 */
+.settings-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.settings-tab {
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--w11-border);
+    background: #f4f7fb;
+    color: #324157;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    position: relative;
+}
+
+.settings-tab:not(.is-active):hover {
+    background: #f5f7fa;
+    border-color: var(--w11-border);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.settings-tab:not(.is-active):active {
+    background: #e8ebf0;
+    border-color: var(--w11-border);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.settings-tab.is-active {
+    background: #dfe8f4;
+    border-color: #c2d1e5;
+}
+
+/* 激活标签页的蓝色下划线 */
+.settings-tab.is-active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 3px;
+    background: #3b82f6;
+    border-radius: 2px;
+}
+
+/* 表格容器 - 解决截断问题 */
+.table-wrap {
+    overflow-x: auto;
+    overflow-y: auto;
+    border: 1px solid var(--w11-border);
+    border-radius: var(--w11-radius-md);
+    background: #ffffff;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.table-container {
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.module-abac-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    table-layout: auto;
+}
+
+.module-abac-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #eef5fc;
+    color: var(--w11-text-sub);
+    text-align: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--w11-border);
+    white-space: nowrap;
+}
+
+.module-abac-table tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #edf2f7;
+    vertical-align: top;
+    text-align: center;
+}
+
+.module-abac-table tbody tr:hover {
+    background: #f8fbff;
+}
+
+.abac-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+.abac-inline-form select {
+    min-width: 80px;
+}
+
+.level-select-form {
+    justify-content: center;
+}
+
+.operation-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.operation-actions .btn {
+    white-space: nowrap;
+}
+
+.confirm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgba(27, 35, 47, 0.32);
+}
+
+.confirm-modal.is-hidden {
+    display: none;
+}
+
+.confirm-modal-card {
+    width: min(420px, 100%);
+    border-radius: 14px;
+    border: 1px solid var(--w11-border);
+    background: #ffffff;
+    box-shadow: 0 18px 36px rgba(32, 41, 56, 0.18);
+    padding: 18px;
+    display: grid;
+    gap: 10px;
+}
+
+.confirm-modal-card h3 {
+    margin: 0;
+    font-size: 18px;
+    text-align: left;
+}
+
+.confirm-modal-card p {
+    margin: 0;
+    color: var(--w11-text-sub);
+}
+
+.empty-cell {
+    text-align: center;
+    color: var(--w11-text-sub);
+    padding: 18px 12px;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (max-width: 960px) {
+    .settings-main-panel .settings-toolbar {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    .settings-main-panel .settings-toolbar h2 {
+        position: relative;
+        left: auto;
+        top: auto;
+        transform: none;
+        order: 0;
+        width: 100%;
+        text-align: center;
+    }
+
+    .settings-main-panel .settings-toolbar .settings-tabs {
+        order: 1;
+    }
+
+    .settings-main-panel .settings-toolbar .btn {
+        order: 2;
+    }
+
+    .abac-inline-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .operation-actions {
+        flex-wrap: wrap;
+    }
+}

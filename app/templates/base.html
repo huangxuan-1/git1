@@ -1,0 +1,237 @@
+{% set is_authenticated = session.get("account_id") and session.get("account_type") %}
+{% if show_app_shell is not defined %}
+    {% set show_app_shell = true %}
+{% endif %}
+{% if current_path is not defined %}
+    {% set current_path = request.path %}
+{% endif %}
+{% set endpoint = request.endpoint or "" %}
+{% set show_dynamic_watermark = is_authenticated and endpoint != "auth.login" %}
+{% set session_account_type = session.get("account_type") %}
+{% if session_account_type == "administrator" %}
+    {% set watermark_user_id = "管理员#1" %}
+{% else %}
+    {% set watermark_user_id = session.get("account_id", "") %}
+{% endif %}
+{% if active_nav is not defined %}
+    {% if endpoint.startswith("audit.") %}
+        {% set active_nav = "audit" %}
+    {% elif endpoint == "auth.dashboard" %}
+        {% set active_nav = "console" %}
+    {% elif endpoint.startswith("file.recycle") %}
+        {% set active_nav = "recycle" %}
+    {% elif endpoint == "auth.admin_create_user" or endpoint.startswith("abac.") %}
+        {% set active_nav = "admin" %}
+    {% elif endpoint.startswith("face.") or endpoint.startswith("fingerprint.") or endpoint == "auth.profile_page" %}
+        {% set active_nav = "profile" %}
+    {% else %}
+        {% set active_nav = "files" %}
+    {% endif %}
+{% endif %}
+{% set show_file_workspace = active_nav == "files" and endpoint != "file.file_list_page" %}
+{% if explorer_files is not defined %}
+    {% set explorer_files = [
+        {"name": "保密任务档案", "type": "文件夹", "size": "--", "uploaded": "2026-04-15 09:22", "level": "高级"},
+        {"name": "涉密资料总表.xlsx", "type": "XLSX", "size": "2.3 MB", "uploaded": "2026-04-14 17:08", "level": "中级"},
+        {"name": "系统验收记录.md", "type": "MD", "size": "92 KB", "uploaded": "2026-04-15 08:55", "level": "初级"},
+        {"name": "生物认证操作规范.pdf", "type": "PDF", "size": "1.1 MB", "uploaded": "2026-04-13 20:31", "level": "高级"},
+        {"name": "系统部署说明.docx", "type": "DOCX", "size": "854 KB", "uploaded": "2026-04-12 10:09", "level": "中级"}
+    ] %}
+{% endif %}
+{% set page_content %}{% block content %}{% endblock %}{% endset %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block page_title %}涉密信息管理{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block page_css %}{% endblock %}
+</head>
+<body class="w11-body{% if not show_app_shell %} is-auth-mode{% endif %}">
+    {% if show_dynamic_watermark %}
+        <canvas
+            id="globalWatermarkCanvas"
+            class="global-watermark-canvas"
+            data-system-name="涉密"
+            data-user-name="{{ session.get('account_name', '未知账号') }}"
+                data-user-id="{{ watermark_user_id }}"
+            aria-hidden="true"></canvas>
+    {% endif %}
+    <div class="w11-app-window{% if not show_app_shell %} auth-window{% endif %}">
+        <header class="w11-titlebar">
+            <div class="titlebar-left">
+                <span class="windows-dot" aria-hidden="true"></span>
+                <span class="titlebar-text">涉密信息管理</span>
+                {% if is_authenticated and session.get('account_type') == 'administrator' %}
+                    <nav class="titlebar-actions" aria-label="快捷入口">
+                        <a class="btn btn-primary" href="{{ url_for('abac.permission_management_page') }}">权限管理</a>
+                        <a class="btn btn-primary" href="{{ url_for('abac.file_level_management_page') }}">文件密级设置</a>
+                        <a class="btn btn-secondary" href="{{ url_for('auth.admin_create_user') }}">创建用户</a>
+                    </nav>
+                {% endif %}
+            </div>
+            <div class="titlebar-right">
+                {% if is_authenticated %}
+                    <span class="account-badge">{{ session.get("account_name", "未知账号") }} / {{ "管理员" if session.get("account_type") == "administrator" else "用户" }}</span>
+                    <form method="post" action="{{ url_for('auth.logout') }}">
+                        <button type="submit" class="w11-btn secondary">退出登录</button>
+                    </form>
+                {% endif %}
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            <div class="flash-global-container{% if not messages %} is-empty{% endif %}" id="globalFlashContainer">
+                <div class="flash-list" id="globalFlashList">
+                    {% for category, message in messages %}
+                        <div class="flash-item flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endwith %}
+
+        {% if show_app_shell %}
+            <div class="w11-shell" data-explorer-shell="true">
+                <aside class="w11-sidebar">
+                    <div class="sidebar-head">导航</div>
+                    <nav class="nav-list" aria-label="主导航">
+                        {% if is_authenticated %}
+                            <a class="nav-link{% if active_nav == 'files' %} is-active{% endif %}" href="{{ url_for('file.file_list_page') }}">文件资源</a>
+                            <a class="nav-link{% if active_nav == 'profile' %} is-active{% endif %}" href="{{ url_for('auth.profile_page') }}">个人中心</a>
+                            {% if session.get('account_type') == 'administrator' %}
+                                <a class="nav-link{% if active_nav == 'admin' %} is-active{% endif %}" href="{{ url_for('abac.admin_home_page') }}">系统设置</a>
+                                <a class="nav-link{% if active_nav == 'audit' %} is-active{% endif %}" href="{{ url_for('audit.audit_home_page') }}">审计日志</a>
+                                <a class="nav-link{% if active_nav == 'recycle' %} is-active{% endif %}" href="{{ url_for('file.recycle_bin_page') }}">回收站</a>
+                            {% endif %}
+                        {% else %}
+                            <a class="nav-link is-active" href="{{ url_for('auth.login') }}">登录页面</a>
+                        {% endif %}
+                    </nav>
+                </aside>
+
+                <section class="w11-workspace">
+                    {% if show_file_workspace %}
+                        <header class="w11-toolbar is-hidden">
+                            <div class="toolbar-search-wrap">
+                                <input id="toolbarSearch" class="toolbar-search" type="search" placeholder="搜索当前文件..." aria-label="搜索文件">
+                            </div>
+                            <div class="toolbar-actions">
+                                <input id="toolbarUploadInput" type="file" class="visually-hidden" multiple>
+                                <button id="toolbarUploadBtn" type="button" class="w11-btn">上传</button>
+                                <button id="toolbarNewFolderBtn" type="button" class="w11-btn">新建文件夹</button>
+                                <button type="button" class="w11-btn" data-view="list">列表视图</button>
+                                <button type="button" class="w11-btn" data-view="icon">图标视图</button>
+                            </div>
+                        </header>
+
+                        <main id="explorerMain" class="explorer-main explorer-main-detail main-content" data-view-mode="list">
+                            <section class="explorer-files-panel panel-card">
+                                <div class="panel-title-row">
+                                    <h2>文件资源管理器</h2>
+                                    {% if return_to_list_url is defined %}
+                                    <a class="btn btn-secondary btn-return-list" href="{{ return_to_list_url }}">返回列表</a>
+                                    {% else %}
+                                    <a class="btn btn-secondary btn-return-list" href="{{ url_for('file.file_list_page') }}">返回列表</a>
+                                    {% endif %}
+                                </div>
+                                <div class="file-table-wrap table-container">
+                                    <table class="file-table">
+                                        <thead>
+                                            <tr>
+                                                <th>名称</th>
+                                                <th>类型</th>
+                                                <th>大小</th>
+                                                <th>上传时间</th>
+                                                <th>安全级别</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="fileTableBody">
+                                            {% for item in explorer_files %}
+                                                {% set file_name = item.get("name", "未命名") %}
+                                                {% set file_type = item.get("type", "未知") %}
+                                                {% set file_size = item.get("size", "--") %}
+                                                {% set file_uploaded = item.get("uploaded", "--") %}
+                                                {% set file_level = item.get("level", "初级") %}
+                                                <tr class="file-row"
+                                                    data-name="{{ file_name }}"
+                                                    data-type="{{ file_type }}"
+                                                    data-size="{{ file_size }}"
+                                                    data-uploaded="{{ file_uploaded }}"
+                                                    data-level="{{ file_level }}">
+                                                    <td>{{ file_name }}</td>
+                                                    <td>{{ file_type }}</td>
+                                                    <td>{{ file_size }}</td>
+                                                    <td>{{ file_uploaded }}</td>
+                                                    <td>{{ file_level }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div id="fileIconGrid" class="file-icon-grid">
+                                    {% for item in explorer_files %}
+                                        {% set file_name = item.get("name", "未命名") %}
+                                        {% set file_type = item.get("type", "未知") %}
+                                        {% set file_size = item.get("size", "--") %}
+                                        {% set file_uploaded = item.get("uploaded", "--") %}
+                                        {% set file_level = item.get("level", "初级") %}
+                                        <article class="file-card"
+                                            data-name="{{ file_name }}"
+                                            data-type="{{ file_type }}"
+                                            data-size="{{ file_size }}"
+                                            data-uploaded="{{ file_uploaded }}"
+                                            data-level="{{ file_level }}">
+                                            <div class="file-card-name">{{ file_name }}</div>
+                                            <div class="file-card-meta">{{ file_type }} / {{ file_size }}</div>
+                                            <div class="file-card-meta">{{ file_level }}</div>
+                                            <div class="file-card-meta">{{ file_uploaded }}</div>
+                                        </article>
+                                    {% endfor %}
+                                </div>
+                            </section>
+
+                            <section class="explorer-module-panel panel-card">
+                                {{ page_content | safe }}
+                            </section>
+                        </main>
+
+                        <footer class="w11-statusbar">
+                            <span id="statusCurrentPath">当前路径：{{ current_path }}</span>
+                            <span id="statusFileCount">文件数量：{{ explorer_files|length }}</span>
+                            <span id="statusViewMode">当前视图：列表</span>
+                        </footer>
+                    {% else %}
+                        <main class="explorer-main explorer-main-single main-content">
+                            <section class="explorer-module-panel panel-card panel-card-full">
+                                {{ page_content | safe }}
+                            </section>
+                        </main>
+
+                        <footer class="w11-statusbar">
+                            <span>当前路径：{{ current_path }}</span>
+                            <span>当前页面：{{ "文件资源" if active_nav == "files" else ("个人中心" if active_nav == "profile" else ("控制台" if active_nav == "console" else ("系统设置" if active_nav == "admin" else ("回收站" if active_nav == "recycle" else "审计日志")))) }}</span>
+                        </footer>
+                    {% endif %}
+                </section>
+            </div>
+        {% else %}
+            <main class="auth-stage panel-card main-content">
+                <header class="auth-header">
+                    <h1>{{ page_heading if page_heading is defined else "涉密信息管理" }}</h1>
+                    {% if page_subheading is defined %}
+                        <p>{{ page_subheading }}</p>
+                    {% endif %}
+                </header>
+
+                {{ page_content | safe }}
+            </main>
+        {% endif %}
+    </div>
+
+    <script src="{{ url_for('static', filename='js/base_layout.js') }}" defer></script>
+    {% block page_js %}{% endblock %}
+</body>
+</html>

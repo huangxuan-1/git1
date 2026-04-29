@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% set active_nav = "audit" %}
+
+{% block page_title %}审计日志查看页{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/audit_module.css') }}">
+{% endblock %}
+
+{% block content %}
+    <section class="panel-card audit-panel">
+        
+        <h2>审计日志筛选</h2>
+
+        <form method="get" action="{{ url_for('audit.audit_log_list_page') }}" class="audit-filter-form">
+            <div class="filter-grid-two-columns">
+                <div class="filter-column">
+                    <label>
+                        开始时间（YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS）
+                        <input
+                            type="text"
+                            name="start_time"
+                            value="{{ filters.start_time }}"
+                            pattern="^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$"
+                            title="请输入合法格式：YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS"
+                        >
+                    </label>
+                    <label>
+                        结束时间（YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS）
+                        <input
+                            type="text"
+                            name="end_time"
+                            value="{{ filters.end_time }}"
+                            pattern="^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$"
+                            title="请输入合法格式：YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS"
+                        >
+                    </label>
+                </div>
+                <div class="filter-column">
+                    <label>
+                        操作者
+                        <input
+                            type="text"
+                            name="operator_id"
+                            value="{{ filters.operator_id }}"
+                            pattern="^[0-9\u4e00-\u9fa5#]*$"
+                            title="操作者仅支持数字、中文和#"
+                        >
+                    </label>
+                    <label>
+                        操作类型
+                        <input
+                            type="text"
+                            name="operation_type"
+                            value="{{ filters.operation_type }}"
+                            list="operationTypeList"
+                            pattern="^[\u4e00-\u9fa5]*$"
+                            title="操作类型仅支持中文"
+                        >
+                    </label>
+                </div>
+                <div class="filter-row-full">
+                    <label>
+                        文件ID
+                        <input
+                            type="text"
+                            name="file_id"
+                            value="{{ filters.file_id }}"
+                            inputmode="numeric"
+                            pattern="^[0-9]*$"
+                            title="文件ID仅支持数字"
+                        >
+                    </label>
+                </div>
+            </div>
+            <datalist id="operationTypeList">
+                {% for type_text in operation_types %}
+                    <option value="{{ type_text }}"></option>
+                {% endfor %}
+            </datalist>
+
+            <div class="button-row top-gap">
+                <button type="submit" class="btn btn-primary">查询日志</button>
+                <a href="{{ url_for('audit.audit_log_list_page') }}" class="btn btn-secondary">重置筛选</a>
+                <a href="{{ url_for('audit.audit_log_export_csv') }}{% if export_query %}?{{ export_query }}{% endif %}" class="btn btn-secondary">导出 CSV</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel-card audit-panel">
+        <h2>审计日志列表</h2>
+        <div class="table-wrap table-container audit-table-wrap">
+            <table class="module-audit-table">
+                <thead>
+                    <tr>
+                        <th>日志ID</th>
+                        <th>操作者ID</th>
+                        <th>操作类型</th>
+                        <th>文件ID</th>
+                        <th>IP地址</th>
+                        <th>操作时间</th>
+                        <th>结果</th>
+                        <th>详情</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if log_rows %}
+                        {% for row in log_rows %}
+                            {% set item = row.log %}
+                            <tr>
+                                <td>{{ item.id }}</td>
+                                <td>{{ row.actor }}</td>
+                                <td>{{ item.operation_type }}</td>
+                                <td>{{ item.file_id if item.file_id is not none else '--' }}</td>
+                                <td>{{ item.ip_address }}</td>
+                                <td>{{ item.operation_time.strftime('%Y-%m-%d %H:%M:%S') if item.operation_time else '--' }}</td>
+                                <td>
+                                    <span class="status-chip {% if item.is_success %}success{% else %}danger{% endif %}">
+                                        {{ '成功' if item.is_success else '失败' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a
+                                        href="{{ url_for('audit.audit_log_detail_page', log_id=item.id, next=request.full_path) }}"
+                                        class="btn btn-secondary btn-sm"
+                                    >查看详情</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="empty-cell">暂无符合条件的审计日志</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        {% set total_pages = pagination.pages if pagination.pages > 0 else 1 %}
+        <div class="pagination-wrap top-gap">
+            <div class="pagination-main">
+                {% if pagination.has_prev %}
+                    <a
+                        href="{{ url_for('audit.audit_log_list_page', page=pagination.prev_num, start_time=filters.start_time, end_time=filters.end_time, operator_id=filters.operator_id, operation_type=filters.operation_type, file_id=filters.file_id) }}"
+                        class="btn btn-secondary"
+                    >上一页</a>
+                {% else %}
+                    <span class="btn btn-secondary is-disabled" aria-disabled="true">上一页</span>
+                {% endif %}
+
+                <span class="page-summary">{{ pagination.page }} / {{ total_pages }}</span>
+
+                {% if pagination.has_next %}
+                    <a
+                        href="{{ url_for('audit.audit_log_list_page', page=pagination.next_num, start_time=filters.start_time, end_time=filters.end_time, operator_id=filters.operator_id, operation_type=filters.operation_type, file_id=filters.file_id) }}"
+                        class="btn btn-secondary"
+                    >下一页</a>
+                {% else %}
+                    <span class="btn btn-secondary is-disabled" aria-disabled="true">下一页</span>
+                {% endif %}
+
+                <form method="get" action="{{ url_for('audit.audit_log_list_page') }}" class="page-jump-form">
+                    <input type="hidden" name="start_time" value="{{ filters.start_time }}">
+                    <input type="hidden" name="end_time" value="{{ filters.end_time }}">
+                    <input type="hidden" name="operator_id" value="{{ filters.operator_id }}">
+                    <input type="hidden" name="operation_type" value="{{ filters.operation_type }}">
+                    <input type="hidden" name="file_id" value="{{ filters.file_id }}">
+                    <input
+                        type="number"
+                        name="page"
+                        min="1"
+                        max="{{ total_pages }}"
+                        value="{{ pagination.page }}"
+                        required
+                        aria-label="输入页码"
+                    >
+                    <button type="submit" class="btn btn-secondary">跳转</button>
+                </form>
+            </div>
+        </div>
+    </section>
+{% endblock %}

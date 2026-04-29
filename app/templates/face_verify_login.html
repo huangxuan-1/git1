@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% set show_app_shell = true %}
+{% set active_nav = "profile" %}
+{% set page_heading = "双因子认证：第二步 人脸验证" %}
+{% set page_subheading = "账号：" ~ username ~ "。请采集人脸图像进行验证。" %}
+
+{% block page_title %}双因子认证 - 人脸验证{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mfa.css') }}">
+{% endblock %}
+
+{% block content %}
+    <main class="panel-card mfa-center-wrapper">
+        <section class="mfa-center-card">
+            <h2>摄像头采集</h2>
+            <form method="post" action="{{ url_for('auth.face_verify_step') }}" class="mfa-center-form">
+                <div class="camera-toolbar-center">
+                    <button type="button" class="btn btn-secondary" id="camera-start">开启摄像头</button>
+                    <button type="button" class="btn btn-secondary" id="camera-stop">关闭摄像头</button>
+                </div>
+
+                <video id="camera-video" autoplay playsinline></video>
+
+                <div class="capture-center">
+                    <button type="button" class="btn btn-primary capture-button"
+                            data-input-id="liveness_image_data"
+                            data-preview-id="liveness_preview">采集人脸图像</button>
+                    <img id="liveness_preview" alt="人脸图像预览">
+                </div>
+
+                <input type="hidden" id="liveness_image_data" name="liveness_image_data">
+
+                <div class="button-row submit-row">
+                    <button type="submit" class="btn btn-primary">提交人脸验证</button>
+                </div>
+            </form>
+        </section>
+    </main>
+{% endblock %}
+
+{% block page_js %}
+    <script src="{{ url_for('static', filename='js/mfa_face_capture.js') }}" defer></script>
+{% endblock %}

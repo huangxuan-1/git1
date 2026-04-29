@@ -1,0 +1,540 @@
+/* === 个人中心页面整体布局 === */
+.profile-page-wrapper {
+    width: 100%;
+    min-height: calc(100vh - 180px);
+    display: grid;
+    gap: 16px;
+    padding: 0 4px;
+}
+
+/* 顶部标题栏 */
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f5f5f5 100%);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.profile-header h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.header-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.system-version {
+    background: #dbeafe;
+    padding: 4px 12px;
+    border-radius: 6px;
+    color: #1e40af;
+}
+
+/* === 当前登录信息卡片（通栏） === */
+.login-info-panel {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.login-info-panel h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 8px;
+}
+
+.login-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.info-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #dbeafe;
+    border-radius: 8px;
+    color: #3b82f6;
+    font-size: 16px;
+}
+
+.info-label {
+    font-size: 13px;
+    color: #6b7280;
+    min-width: 70px;
+}
+
+.info-value {
+    font-size: 14px;
+    color: #1f2937;
+    font-weight: 500;
+    flex: 1;
+    text-align: right;
+}
+
+/* 安全级别标签 */
+.security-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.security-badge.level-basic {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.security-badge.level-intermediate {
+    background: #fed7aa;
+    color: #c2410c;
+}
+
+.security-badge.level-advanced {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.security-badge.level-admin {
+    background: #e9d5ff;
+    color: #7c3aed;
+}
+
+/* 状态标签 */
+.status-badge.enabled {
+    background: #dcfce7;
+    color: #166534;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+/* === 两列卡片布局 === */
+.two-columns-row {
+    display: grid;
+    grid-template-columns: 48% 48%;
+    gap: 4%;
+}
+
+/* === 生物信息管理卡片 === */
+.biometric-panel {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.biometric-panel h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 8px;
+}
+
+.biometric-cards-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.biometric-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+    gap: 12px;
+}
+
+.biometric-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #dbeafe;
+    border-radius: 50%;
+    color: #3b82f6;
+    font-size: 24px;
+}
+
+.biometric-content h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.biometric-status-text {
+    margin: 8px 0;
+}
+
+.biometric-time {
+    margin: 0;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* 修改密码按钮行 */
+.password-button-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* === 权限详情卡片 === */
+.permission-panel {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.permission-panel h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 8px;
+}
+
+.permission-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.permission-level h3,
+.permission-list h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.permission-level-bar {
+    margin-top: 8px;
+}
+
+.level-bar {
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.level-bar.level-basic {
+    background: linear-gradient(90deg, #dbeafe 0%, #93c5fd 100%);
+    width: 33%;
+}
+
+.level-bar.level-intermediate {
+    background: linear-gradient(90deg, #fed7aa 0%, #fdba74 100%);
+    width: 66%;
+}
+
+.level-bar.level-advanced {
+    background: linear-gradient(90deg, #fee2e2 0%, #fecaca 100%);
+    width: 100%;
+}
+
+.level-bar.level-admin {
+    background: linear-gradient(90deg, #e9d5ff 0%, #c4b5fd 100%);
+    width: 100%;
+}
+
+.level-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.level-desc {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.permission-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.permission-checklist li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.permission-checklist li.checked {
+    color: #166534;
+}
+
+.permission-checklist li.checked i {
+    color: #22c55e;
+}
+
+.permission-checklist li.unchecked {
+    color: #9ca3af;
+}
+
+.permission-checklist li.unchecked i {
+    color: #d1d5db;
+}
+
+.permission-tip {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+    padding: 8px;
+    background: #f1f5f9;
+    border-radius: 6px;
+}
+
+/* === 状态标签通用 === */
+.status-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.status-chip.success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-chip.warning {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.status-chip.danger {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* === 弹窗样式 === */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 400px;
+    max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.modal-close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+}
+
+.modal-close:hover {
+    background: #f1f5f9;
+}
+
+.modal-form {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+/* === 小按钮样式 === */
+.btn-small {
+    padding: 6px 14px;
+    font-size: 13px;
+}
+
+/* === 响应式适配 === */
+@media (max-width: 1100px) {
+    .two-columns-row {
+        grid-template-columns: 1fr;
+    }
+
+    .login-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .login-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .biometric-cards-row {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-header {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+
+    .header-meta {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* === 控制台模式（管理员） === */
+.console-dashboard-layout {
+    width: 100%;
+    min-height: calc(100vh - 180px);
+    display: grid;
+    gap: 14px;
+}
+
+.console-dashboard-layout.is-console-mode {
+    place-items: center;
+    align-content: center;
+}
+
+.console-login-info-card {
+    max-width: 860px;
+}
+
+.console-quick-entry-card {
+    width: min(640px, 100%);
+    display: grid;
+    gap: 12px;
+    align-content: start;
+}
+
+.console-quick-entry-card h2 {
+    margin: 0;
+    text-align: center;
+}
+
+.titlebar-console-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: 6px;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+}
+
+.titlebar-console-actions .btn {
+    min-height: 28px;
+    height: 28px;
+    padding: 0 12px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+@media (max-width: 960px) {
+    .console-dashboard-layout.is-console-mode {
+        place-items: stretch;
+        align-content: start;
+    }
+
+    .console-quick-entry-card {
+        width: 100%;
+    }
+}

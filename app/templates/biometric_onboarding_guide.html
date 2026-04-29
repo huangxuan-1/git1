@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% set active_nav = "profile" %}
+
+{% block page_title %}首次登录生物特征注册{% endblock %}
+
+{% block content %}
+    <section class="panel-card">
+        <h2>首次登录生物特征注册引导</h2>
+        <p class="info-line">您是首次登录，请先完成生物特征注册。</p>
+        <p class="info-line">请按顺序完成两步：第一步录入人脸（含活体检测），第二步录入指纹图片。</p>
+
+        <div class="button-row top-gap">
+            <a href="{{ url_for('face.face_register_page') }}" class="btn btn-primary">
+                第一步：录入人脸
+                {% if face_registered %}（已完成）{% endif %}
+            </a>
+            <a href="{{ url_for('fingerprint.fingerprint_page') }}" class="btn btn-secondary">
+                第二步：录入指纹
+                {% if fingerprint_registered %}（已完成）{% endif %}
+            </a>
+        </div>
+    </section>
+{% endblock %}

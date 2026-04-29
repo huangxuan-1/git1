@@ -1,0 +1,424 @@
+/* === 人脸录入卡片 === */
+.face-main-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.face-main-grid.is-onboarding {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px 0;
+}
+
+.face-main-grid.is-onboarding .face-register-card {
+    margin: 0 auto;
+    max-width: 480px;
+}
+
+.face-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    background: #fff;
+}
+
+.face-register-card {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-sizing: border-box;
+}
+
+.face-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    text-align: center;
+    margin: 0;
+}
+
+/* === 步骤区块 === */
+.face-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.face-section.hidden {
+    display: none;
+}
+
+.section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+    text-align: center;
+    margin: 0;
+}
+
+.section-desc {
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+    margin: 0;
+}
+
+.section-footer {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+/* === 标签页切换 === */
+.base-face-tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    background: #f3f4f6;
+    color: #6b7280;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: #e5e7eb;
+}
+
+.tab-btn.active {
+    background: #3b82f6;
+    color: #fff;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* === 文件上传 === */
+.file-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.file-tip {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 0;
+}
+
+/* === 预览框 === */
+.preview-box {
+    width: 100%;
+    max-width: 200px;
+    min-height: 120px;
+    margin: 8px auto;
+    border: 1px dashed #d1d5db;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    position: relative;
+}
+
+.preview-box img {
+    max-width: 100%;
+    max-height: 120px;
+    object-fit: contain;
+    border-radius: 6px;
+}
+
+.preview-box img[src=""],
+.preview-box img:not([src]) {
+    display: none;
+}
+
+.preview-placeholder {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+.preview-box img[src] + .preview-placeholder {
+    display: none;
+}
+
+/* === 视频/摄像头画面 === */
+.video-box {
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 4/3;
+    margin: 8px auto;
+    border-radius: 8px;
+    background: #1f2937;
+    overflow: hidden;
+    position: relative;
+}
+
+.video-box video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.video-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: 14px;
+    background: #1f2937;
+}
+
+.video-placeholder.hidden {
+    display: none;
+}
+
+/* === 活体检测画面 === */
+.liveness-video-box {
+    max-width: 360px;
+}
+
+.guide-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.guide-frame {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    width: 80%;
+    height: 80%;
+    border: 2px solid rgba(59, 130, 246, 0.5);
+    border-radius: 12px;
+    box-sizing: border-box;
+}
+
+.liveness-status-overlay {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 16px;
+    background: rgba(59, 130, 246, 0.85);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 20px;
+    white-space: nowrap;
+    max-width: 90%;
+    text-align: center;
+}
+
+/* === 活体检测状态 === */
+.liveness-status {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+}
+
+.status-label {
+    font-size: 14px;
+    color: #374151;
+}
+
+.status-value {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.status-row.completed .status-value {
+    color: #10b981;
+}
+
+.status-row.in-progress .status-value {
+    color: #3b82f6;
+}
+
+/* === 摄像头控制按钮 === */
+.camera-controls {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.camera-controls .btn {
+    min-width: 80px;
+}
+
+/* === 错误提示 === */
+.error-box {
+    padding: 12px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.error-box.hidden {
+    display: none;
+}
+
+.error-text {
+    color: #b91c1c;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* === 成功提示 === */
+.success-box {
+    text-align: center;
+    padding: 20px;
+}
+
+.success-icon {
+    display: inline-block;
+    width: 48px;
+    height: 48px;
+    line-height: 48px;
+    border-radius: 50%;
+    background: #10b981;
+    color: #fff;
+    font-size: 24px;
+    margin-bottom: 12px;
+}
+
+.success-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #065f46;
+    margin: 0 0 8px;
+}
+
+.success-desc {
+    font-size: 13px;
+    color: #047857;
+    margin: 0;
+}
+
+/* === 人脸比对区块 === */
+.face-verify-card {
+    margin-top: 16px;
+}
+
+.small-video {
+    max-width: 280px;
+    aspect-ratio: 4/3;
+}
+
+/* === 比对结果 === */
+.verify-result {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.verify-result.success {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+}
+
+.verify-result.failed {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+}
+
+.verify-result p {
+    margin: 4px 0;
+    font-size: 14px;
+}
+
+/* === 按钮样式 === */
+.btn-wide {
+    min-width: 160px;
+    max-width: 240px;
+}
+
+.btn.hidden {
+    display: none;
+}
+
+/* === 隐藏类 === */
+.hidden-block,
+.hidden {
+    display: none !important;
+}
+
+/* === 响应式适配 === */
+@media (max-width: 980px) {
+    .face-main-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 540px) {
+    .video-box {
+        max-width: 100%;
+    }
+
+    .liveness-video-box {
+        max-width: 100%;
+    }
+
+    .section-footer {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .btn-wide {
+        width: 100%;
+        max-width: 100%;
+    }
+}

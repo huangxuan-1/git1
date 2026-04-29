@@ -1,0 +1,164 @@
+.mfa-shell {
+    width: min(1180px, 98vw);
+}
+
+/* 居中布局样式 */
+.mfa-center-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 200px);
+    padding: 40px 20px;
+}
+
+.mfa-center-card {
+    border: 1px solid #d8dee6;
+    border-radius: 12px;
+    padding: 24px 32px;
+    background: #f8fafc;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+}
+
+.mfa-center-card h2 {
+    margin: 0 0 20px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.mfa-center-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+}
+
+.camera-toolbar-center {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+}
+
+#camera-video {
+    width: 100%;
+    max-width: 400px;
+    height: 300px;
+    border-radius: 10px;
+    border: 1px solid #cfd8e3;
+    background: #eef2f7;
+    object-fit: cover;
+}
+
+.capture-center {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+}
+
+.capture-center img {
+    width: 200px;
+    height: 150px;
+    border-radius: 10px;
+    border: 1px solid #cfd8e3;
+    object-fit: cover;
+    background: #ffffff;
+}
+
+.submit-row {
+    margin-top: 8px;
+    display: flex;
+    justify-content: center;
+}
+
+/* 旧样式保留（用于其他页面兼容） */
+.mfa-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mfa-card {
+    border: 1px solid #d8dee6;
+    border-radius: 12px;
+    padding: 16px;
+    background: #f8fafc;
+}
+
+.mfa-card h2 {
+    margin: 0 0 8px;
+}
+
+.mfa-form {
+    display: grid;
+    gap: 10px;
+}
+
+.mfa-form label {
+    font-size: 14px;
+    color: #4b5563;
+}
+
+.mfa-form input[type="file"] {
+    border: 1px solid #cfd8e3;
+    border-radius: 8px;
+    padding: 8px;
+    background: #ffffff;
+}
+
+.top-gap {
+    margin-top: 8px;
+}
+
+.camera-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.capture-grid {
+    margin-top: 12px;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.capture-item {
+    display: grid;
+    gap: 8px;
+}
+
+.capture-item img {
+    width: 100%;
+    min-height: 110px;
+    border-radius: 10px;
+    border: 1px solid #cfd8e3;
+    object-fit: cover;
+    background: #ffffff;
+}
+
+@media (max-width: 960px) {
+    .mfa-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .capture-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mfa-center-wrapper {
+        padding: 20px;
+    }
+
+    .mfa-center-card {
+        padding: 20px;
+    }
+
+    #camera-video {
+        height: 240px;
+    }
+}

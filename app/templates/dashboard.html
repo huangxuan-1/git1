@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% if active_nav is not defined %}
+    {% set active_nav = "profile" %}
+{% endif %}
+
+{% block page_title %}个人中心{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-page-wrapper">
+    <!-- 顶部标题栏 -->
+    <header class="profile-header">
+        <h1>个人中心</h1>
+        <div class="header-meta">
+            <span class="system-version">涉密信息管理系统 v1.0</span>
+        </div>
+    </header>
+
+    <!-- 当前登录信息卡片（通栏） -->
+    <section class="panel-card login-info-panel">
+        <h2>当前登录信息</h2>
+        <div class="login-info-grid">
+            <div class="info-item">
+                <span class="info-icon"><i class="fas fa-user"></i></span>
+                <span class="info-label">账号名称</span>
+                <span class="info-value">{{ account_name }}（{{ username }}）</span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon"><i class="fas fa-id-badge"></i></span>
+                <span class="info-label">登录者ID</span>
+                <span class="info-value">{{ login_actor_id }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon"><i class="fas fa-user-tag"></i></span>
+                <span class="info-label">账号类型</span>
+                <span class="info-value">{{ '管理员' if account_type == 'administrator' else '普通用户' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon"><i class="fas fa-shield-alt"></i></span>
+                <span class="info-label">安全级别</span>
+                <span class="info-value">
+                    <span class="security-badge {{ security_level_class }}">{{ security_level }}</span>
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon"><i class="fas fa-check-circle"></i></span>
+                <span class="info-label">账号状态</span>
+                <span class="info-value"><span class="status-badge enabled">已启用</span></span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon"><i class="fas fa-clock"></i></span>
+                <span class="info-label">最后登录时间</span>
+                <span class="info-value">{{ last_login_time }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon"><i class="fas fa-map-marker-alt"></i></span>
+                <span class="info-label">登录IP地址</span>
+                <span class="info-value">{{ login_ip }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon"><i class="fas fa-laptop"></i></span>
+                <span class="info-label">登录设备</span>
+                <span class="info-value">{{ login_device }}</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 第二行：两个卡片等宽并排 -->
+    <div class="two-columns-row">
+        <!-- 生物识别信息管理卡片 -->
+        <section class="panel-card biometric-panel">
+            <h2>生物识别信息管理</h2>
+            <div class="biometric-cards-row">
+                <div class="biometric-card">
+                    <div class="biometric-icon"><i class="fas fa-user-circle"></i></div>
+                    <div class="biometric-content">
+                        <h3>人脸信息</h3>
+                        <p class="biometric-status-text">
+                            <span class="status-chip {{ 'success' if has_face_feature else 'warning' }}">
+                                {{ '已录入' if has_face_feature else '未录入' }}
+                            </span>
+                        </p>
+                        {% if has_face_feature and face_record_time %}
+                        <p class="biometric-time">录入时间：{{ face_record_time }}</p>
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('face.face_register_page') }}" class="btn btn-primary btn-small">
+                        {{ '更新人脸' if has_face_feature else '立即录入' }}
+                    </a>
+                </div>
+                <div class="biometric-card">
+                    <div class="biometric-icon"><i class="fas fa-fingerprint"></i></div>
+                    <div class="biometric-content">
+                        <h3>指纹信息</h3>
+                        <p class="biometric-status-text">
+                            <span class="status-chip {{ 'success' if has_fingerprint_feature else 'warning' }}">
+                                {{ '已录入' if has_fingerprint_feature else '未录入' }}
+                            </span>
+                        </p>
+                        {% if has_fingerprint_feature and fingerprint_record_time %}
+                        <p class="biometric-time">录入时间：{{ fingerprint_record_time }}</p>
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('fingerprint.fingerprint_page') }}" class="btn btn-primary btn-small">
+                        {{ '更新指纹' if has_fingerprint_feature else '立即录入' }}
+                    </a>
+                </div>
+            </div>
+            <!-- 修改密码按钮 -->
+            <div class="password-button-row">
+                <button class="btn btn-secondary" onclick="openPasswordModal()">
+                    <i class="fas fa-key"></i> 修改登录密码
+                </button>
+            </div>
+        </section>
+
+        <!-- 权限详情卡片 -->
+        <section class="panel-card permission-panel">
+            <h2>我的权限详情</h2>
+            <div class="permission-content">
+                <div class="permission-level">
+                    <h3>密级权限</h3>
+                    <div class="permission-level-bar">
+                        <div class="level-bar {{ security_level_class }}">
+                            <span class="level-text">{{ security_level }}</span>
+                        </div>
+                    </div>
+                    <p class="level-desc">{{ permission_desc }}</p>
+                </div>
+                <div class="permission-list">
+                    <h3>可操作权限</h3>
+                    <ul class="permission-checklist">
+                        <li class="{{ 'checked' if can_upload else 'unchecked' }}">
+                            <i class="fas {{ 'fa-check-circle' if can_upload else 'fa-times-circle' }}"></i>
+                            文件上传下载
+                        </li>
+                        <li class="{{ 'checked' if can_encrypt else 'unchecked' }}">
+                            <i class="fas {{ 'fa-check-circle' if can_encrypt else 'fa-times-circle' }}"></i>
+                            文件加密解密
+                        </li>
+                        <li class="{{ 'checked' if can_delete else 'unchecked' }}">
+                            <i class="fas {{ 'fa-check-circle' if can_delete else 'fa-times-circle' }}"></i>
+                            文件删除
+                        </li>
+                        <li class="{{ 'checked' if can_view_audit else 'unchecked' }}">
+                            <i class="fas {{ 'fa-check-circle' if can_view_audit else 'fa-times-circle' }}"></i>
+                            查看审计日志
+                        </li>
+                        <li class="unchecked">
+                            <i class="fas fa-times-circle"></i>
+                            创建用户（仅管理员）
+                        </li>
+                        <li class="unchecked">
+                            <i class="fas fa-times-circle"></i>
+                            权限管理（仅管理员）
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <p class="permission-tip">权限由系统管理员统一分配，如有变更请联系管理员</p>
+        </section>
+    </div>
+</div>
+
+<!-- 密码修改弹窗 -->
+<div id="passwordModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>修改密码</h3>
+            <button class="modal-close" onclick="closePasswordModal()">&times;</button>
+        </div>
+        <form method="post" action="{{ url_for('auth.change_password_page') }}" class="modal-form">
+            <div class="form-group">
+                <label for="old_password">原密码</label>
+                <input type="password" id="old_password" name="old_password" required placeholder="请输入原密码">
+            </div>
+            <div class="form-group">
+                <label for="new_password">新密码</label>
+                <input type="password" id="new_password" name="new_password" required placeholder="至少6位字符">
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">确认新密码</label>
+                <input type="password" id="confirm_password" name="confirm_password" required placeholder="再次输入新密码">
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">确认修改</button>
+                <button type="button" class="btn btn-secondary" onclick="closePasswordModal()">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openPasswordModal() {
+    document.getElementById('passwordModal').style.display = 'flex';
+}
+
+function closePasswordModal() {
+    document.getElementById('passwordModal').style.display = 'none';
+}
+
+// 点击弹窗外部关闭
+document.getElementById('passwordModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePasswordModal();
+    }
+});
+</script>
+{% endblock %}

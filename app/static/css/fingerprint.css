@@ -1,0 +1,145 @@
+/* === 指纹录入卡片 === */
+.fingerprint-shell {
+    width: min(1160px, 98vw);
+    margin: 0 auto;
+}
+
+.fingerprint-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* onboarding模式下居中显示 */
+.fingerprint-grid.is-onboarding {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px 0;
+}
+
+.fingerprint-grid.is-onboarding .fingerprint-card {
+    margin: 0 auto;
+    max-width: 480px;
+}
+
+.fingerprint-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    background: #fff;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.fingerprint-card h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    text-align: center;
+    margin: 0 0 12px;
+}
+
+.info-line {
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+    margin: 0 0 12px;
+}
+
+.fingerprint-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fingerprint-form label {
+    font-size: 14px;
+    color: #4b5563;
+    font-weight: 500;
+}
+
+.fingerprint-form input[type="file"] {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 10px;
+    background: #ffffff;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 按钮行 */
+.button-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.top-gap {
+    margin-top: 12px;
+}
+
+/* 底部按钮行 */
+.panel-footer-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    padding: 16px 0;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.panel-footer-row.is-onboarding {
+    justify-content: center;
+}
+
+/* 比对结果 */
+.verify-result {
+    margin-top: 14px;
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid #cfd8e3;
+    text-align: center;
+}
+
+.verify-result p {
+    margin: 6px 0;
+    color: #374151;
+    font-size: 14px;
+}
+
+.match-success {
+    background: #e8f5eb;
+    border-color: #b8dfc3;
+}
+
+.match-failed {
+    background: #fbe9e9;
+    border-color: #efc6c6;
+}
+
+/* 响应式适配 */
+@media (max-width: 920px) {
+    .fingerprint-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .fingerprint-grid.is-onboarding {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 540px) {
+    .panel-footer-row {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .panel-footer-row .btn {
+        width: 100%;
+        max-width: 100%;
+    }
+}

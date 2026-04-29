@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% set show_app_shell = true %}
+{% set active_nav = "profile" %}
+{% set page_heading = "项目初始化成功" %}
+{% set page_subheading = "Flask + MySQL + 生物识别认证能力已就绪" %}
+
+{% block page_title %}涉密信息管理系统 - 初始化完成{% endblock %}
+
+{% block content %}
+    <section class="panel-card">
+        <h2>系统状态</h2>
+        <p class="info-line">基础能力已全部加载，可继续登录并执行后续业务流程。</p>
+        <div class="button-row">
+            <a class="btn btn-primary" href="{{ url_for('auth.login') }}">进入登录页面</a>
+        </div>
+    </section>
+{% endblock %}
+
+{% block page_js %}
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+{% endblock %}

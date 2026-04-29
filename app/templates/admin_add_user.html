@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set active_nav = "admin" %}
+
+{% block page_title %}系统设置{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/abac_module.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-page-wrapper">
+    <!-- 顶部标题栏 -->
+    <header class="profile-header">
+        <h1>系统设置</h1>
+        <div class="header-meta">
+            <span class="system-version">涉密信息管理系统 v1.0</span>
+        </div>
+    </header>
+
+    <!-- 创建新用户卡片 -->
+    <section class="panel-card settings-main-panel">
+        <div class="settings-toolbar">
+            <h2>创建新用户</h2>
+            <div class="settings-tabs" role="tablist" aria-label="系统设置标签">
+                <a class="settings-tab" role="tab" aria-selected="false" href="{{ url_for('abac.file_level_management_page') }}">文件密级设置</a>
+                <a class="settings-tab is-active" role="tab" aria-selected="true" href="{{ url_for('abac.permission_management_page') }}">用户设置</a>
+            </div>
+        </div>
+
+        {% set form = form_values or {} %}
+        <form method="post" action="{{ url_for('auth.admin_create_user') }}" class="form-grid admin-create-user-form" style="max-width: 500px; margin: 20px auto;">
+            <div class="field-with-action">
+                <input id="user_id" name="user_id" type="text" maxlength="5" inputmode="numeric" pattern="^\d{5}$" placeholder="用户ID" aria-label="用户ID" value="{{ form.get('user_id', '') }}" required>
+                <button id="generateUserIdBtn" type="button" class="btn btn-secondary form-action-btn btn-small">生成ID</button>
+            </div>
+
+            <input id="name" name="name" type="text" maxlength="50" placeholder="姓名" aria-label="姓名" value="{{ form.get('name', '') }}" required>
+
+            <input id="username" name="username" type="text" maxlength="50" placeholder="用户名" aria-label="用户名" value="{{ form.get('username', '') }}" required>
+
+            <div class="field-with-action">
+                <input id="password" name="password" type="text" minlength="6" placeholder="初始密码" aria-label="初始密码" autocomplete="off" required>
+                <button id="generatePasswordBtn" type="button" class="btn btn-secondary form-action-btn btn-small">生成密码</button>
+            </div>
+
+            <select id="security_level" name="security_level" class="form-select-placeholder" aria-label="安全级别" required>
+                <option value="" disabled {% if not form.get('security_level') %}selected{% endif %}>请选择安全级别</option>
+                <option value="初级" {% if form.get('security_level') == '初级' %}selected{% endif %}>初级</option>
+                <option value="中级" {% if form.get('security_level') == '中级' %}selected{% endif %}>中级</option>
+                <option value="高级" {% if form.get('security_level') == '高级' %}selected{% endif %}>高级</option>
+            </select>
+
+            <div style="display: flex; justify-content: center; margin-top: 16px;">
+                <button type="submit" class="btn btn-primary">确认创建</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block page_js %}
+    <script src="{{ url_for('static', filename='js/auth_form_helpers.js') }}" defer></script>
+{% endblock %}

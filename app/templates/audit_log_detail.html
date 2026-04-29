@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set active_nav = "audit" %}
+
+{% block page_title %}日志详情页{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/audit_module.css') }}">
+{% endblock %}
+
+{% block content %}
+    <section class="panel-card audit-panel">
+        <h2>审计日志详情</h2>
+
+        <p class="info-line">
+            操作结果：
+            <span class="status-chip {% if log_item.is_success %}success{% else %}danger{% endif %}">
+                {{ '成功' if log_item.is_success else '失败' }}
+            </span>
+        </p>
+
+        <div class="audit-detail-grid">
+            <div><strong>日志ID：</strong>{{ log_item.id }}</div>
+            <div><strong>操作者ID：</strong>{{ actor_label }}</div>
+            <div><strong>IP地址：</strong>{{ log_item.ip_address }}</div>
+            <div><strong>操作时间：</strong>{{ log_item.operation_time.strftime('%Y-%m-%d %H:%M:%S') if log_item.operation_time else '--' }}</div>
+            <div><strong>操作类型：</strong>{{ log_item.operation_type }}</div>
+            <div><strong>文件ID：</strong>{{ log_item.file_id if log_item.file_id is not none else '--' }}</div>
+            <div class="full-row"><strong>详细信息：</strong>{{ log_item.detail }}</div>
+        </div>
+
+        <div class="button-row top-gap">
+            <a href="{{ back_url }}" class="btn btn-secondary">返回日志列表</a>
+            <a href="{{ url_for('audit.audit_log_export_csv', operation_type=log_item.operation_type, file_id=log_item.file_id or '') }}" class="btn btn-secondary">导出同类日志</a>
+        </div>
+    </section>
+{% endblock %}

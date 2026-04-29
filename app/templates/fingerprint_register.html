@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% set active_nav = "profile" %}
+
+{% block page_title %}指纹识别管理{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fingerprint.css') }}">
+{% endblock %}
+
+{% block content %}
+    <main class="panel-card fingerprint-grid{% if onboarding_required %} is-onboarding{% endif %}">
+        <section class="fingerprint-card">
+            <h2>{{ '第二步：录入指纹图片' if onboarding_required else ('更新指纹模板' if has_fingerprint_feature else '注册指纹模板') }}</h2>
+            {% if onboarding_required %}
+                <p class="info-line">请完成第二步指纹录入，提交成功后将自动进入系统主界面。</p>
+            {% else %}
+                <p class="info-line">请上传清晰、完整、无遮挡的单枚手指指纹图片。</p>
+            {% endif %}
+
+            <form method="post"
+                  action="{{ url_for('fingerprint.fingerprint_update_submit') if has_fingerprint_feature else url_for('fingerprint.fingerprint_register_submit') }}"
+                  enctype="multipart/form-data"
+                  class="fingerprint-form">
+                <label for="fingerprint_image_file">指纹图片</label>
+                <input id="fingerprint_image_file" name="fingerprint_image_file" type="file" accept="image/*" required>
+
+                <div class="button-row top-gap">
+                    <button type="submit" class="btn btn-primary">{{ '更新指纹模板' if has_fingerprint_feature else '注册指纹模板' }}</button>
+                </div>
+            </form>
+        </section>
+
+        {% if not onboarding_required %}
+            <section class="fingerprint-card">
+                <h2>指纹特征比对</h2>
+                <p class="info-line">系统按 minutiae 模板进行匹配，匹配阈值为 {{ match_threshold }}。</p>
+
+                <form method="post"
+                      action="{{ url_for('fingerprint.fingerprint_verify_submit') }}"
+                      enctype="multipart/form-data"
+                      class="fingerprint-form">
+                    <label for="verify_fingerprint_image_file">待比对指纹图片</label>
+                    <input id="verify_fingerprint_image_file"
+                           name="verify_fingerprint_image_file"
+                           type="file"
+                           accept="image/*"
+                           required>
+
+                    <div class="button-row top-gap">
+                        <button type="submit" class="btn btn-primary">执行指纹比对</button>
+                    </div>
+                </form>
+
+                {% if verify_result %}
+                    <div class="verify-result {{ 'match-success' if verify_result.is_match else 'match-failed' }}">
+                        <p>匹配分值：{{ '%.6f'|format(verify_result.score) }}</p>
+                        <p>阈值：{{ '%.2f'|format(match_threshold) }}</p>
+                        <p>匹配点数：{{ verify_result.matched_points }}</p>
+                        <p>待验证点数：{{ verify_result.probe_points }}</p>
+                        <p>已注册点数：{{ verify_result.enrolled_points }}</p>
+                        <p>结论：{{ '匹配通过（同一指纹）' if verify_result.is_match else '匹配失败（不同指纹）' }}</p>
+                    </div>
+                {% endif %}
+            </section>
+        {% endif %}
+    </main>
+
+    <div class="panel-card panel-footer-row{% if onboarding_required %} is-onboarding{% endif %}">
+        {% if onboarding_required %}
+            <a href="{{ url_for('auth.biometric_onboarding_guide') }}" class="btn btn-secondary">返回引导页</a>
+            <a href="{{ url_for('face.face_register_page') }}" class="btn btn-secondary">返回第一步：录入人脸</a>
+        {% else %}
+            <a href="{{ url_for('auth.dashboard') }}" class="btn btn-secondary">返回控制台</a>
+            <a href="{{ url_for('face.face_register_page') }}" class="btn btn-secondary">进入人脸管理</a>
+        {% endif %}
+    </div>
+{% endblock %}

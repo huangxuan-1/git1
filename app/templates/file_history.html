@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% set active_nav = "files" %}
+
+{% block page_title %}历史版本{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/file_module.css') }}">
+{% endblock %}
+
+{% block content %}
+    <section class="panel-card file-panel">
+        <h2>历史版本记录</h2>
+        <p class="info-line">文件：{{ latest_file.name }} / 当前版本：{{ latest_file.version }}</p>
+
+        <div class="table-wrap table-container">
+            <table class="module-file-table">
+                <thead>
+                    <tr>
+                        <th>版本</th>
+                        <th>密级</th>
+                        <th>大小</th>
+                        <th>上传者</th>
+                        <th>上传时间</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in history_files %}
+                        <tr>
+                            <td>{{ item.version }}</td>
+                            <td>{{ item.level }}</td>
+                            <td>{{ item.file_size }} B</td>
+                            <td>{{ item.uploader_type }}#{{ item.uploader_id }}</td>
+                            <td>{{ item.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                {% if item.is_latest %}
+                                    <span class="tag latest">当前版本</span>
+                                {% elif item.is_deleted %}
+                                    <span class="tag recycle">回收站</span>
+                                {% else %}
+                                    <span class="tag history">历史版本</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a class="btn btn-secondary progress-download"
+                                   href="{{ url_for('file.file_download_history', file_group_id=item.file_group_id, file_id=item.id) }}"
+                                   data-progress-text="正在解密并下载历史版本..."
+                                   data-download-name="{{ item.name }}_v{{ item.version }}">下载</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="button-row top-gap">
+            <a class="btn btn-secondary" href="{{ url_for('file.file_detail_page', file_group_id=latest_file.file_group_id) }}">返回详情页</a>
+            <a class="btn btn-secondary" href="{{ url_for('file.file_list_page') }}">返回列表页</a>
+        </div>
+    </section>
+
+    <div id="cryptoProgressPanel" class="crypto-progress-panel is-hidden" aria-live="polite" aria-atomic="true">
+        <div class="crypto-progress-card">
+            <p id="cryptoProgressText">正在处理...</p>
+            <div class="crypto-progress-track">
+                <div id="cryptoProgressBar" class="crypto-progress-bar"></div>
+            </div>
+            <span id="cryptoProgressPercent">0%</span>
+        </div>
+    </div>
+{% endblock %}
+
+{% block page_js %}
+    <script src="{{ url_for('static', filename='js/file_module.js') }}" defer></script>
+{% endblock %}

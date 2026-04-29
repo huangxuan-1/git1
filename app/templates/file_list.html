@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% set active_nav = "files" %}
+
+{% block page_title %}涉密文件列表{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/file_module.css') }}">
+{% endblock %}
+
+{% block content %}
+    <section class="panel-card file-panel resource-explorer-shell"
+             id="resourceExplorerApp"
+             data-csrf-token="{{ csrf_token() }}"
+             data-parent-id="{{ parent_id }}"
+             data-create-folder-url="{{ url_for('file.folder_create_submit') }}"
+             data-root-url="{{ url_for('file.file_list_page', parent_id=0) }}"
+             data-parent-url="{{ url_for('file.file_list_page', parent_id=current_parent_id) }}"
+             data-default-new-folder-level="{{ default_new_folder_level }}"
+             data-manual-encrypt-url-template="/files/{file_group_id}/manual/encrypt">
+        <header class="explorer-page-header">
+            <!-- 第一行：标题 + 导航按钮 -->
+            <div class="explorer-header-row-1">
+                <div class="explorer-header-left">
+                    <h2 class="explorer-page-title">文件资源管理器</h2>
+                    <div class="explorer-navigation-buttons" aria-label="导航按钮组">
+                        <button type="button" class="explorer-nav-btn" data-nav-action="back" aria-label="后退" title="后退">
+                            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                <path d="M12.8 4.8 7.6 10l5.2 5.2" />
+                            </svg>
+                        </button>
+                        <button type="button" class="explorer-nav-btn" data-nav-action="forward" aria-label="前进" title="前进">
+                            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                <path d="m7.2 4.8 5.2 5.2-5.2 5.2" />
+                            </svg>
+                        </button>
+                        <button type="button"
+                                class="explorer-nav-btn"
+                                data-nav-action="up"
+                                data-target-url="{{ url_for('file.file_list_page', parent_id=current_parent_id) }}"
+                                aria-label="上一级"
+                                title="上一级"
+                                {% if parent_id == 0 %}disabled{% endif %}>
+                            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                <path d="M10 5.2v9.6" />
+                                <path d="M6.2 8.8 10 5l3.8 3.8" />
+                            </svg>
+                        </button>
+                        <button type="button"
+                                class="explorer-nav-btn"
+                                data-nav-action="home"
+                                data-target-url="{{ url_for('file.file_list_page', parent_id=0) }}"
+                                aria-label="根目录"
+                                title="根目录">
+                            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                                <path d="M3.5 9.2 10 4l6.5 5.2" />
+                                <path d="M5 8.9V16h10V8.9" />
+                                <path d="M8 16v-4h4v4" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <nav class="explorer-breadcrumb" aria-label="目录导航">
+                    {% for crumb in breadcrumbs %}
+                        <a href="{{ url_for('file.file_list_page', parent_id=crumb.id) }}"
+                           class="breadcrumb-link{% if loop.last %} is-current{% endif %}">{{ crumb.name }}</a>
+                    {% endfor %}
+                </nav>
+            </div>
+
+            <!-- 第二行：所有操作按钮和输入框 -->
+            <div class="explorer-header-row-2">
+                <form method="get" action="{{ url_for('file.file_list_page') }}" class="explorer-search-form">
+                    <input type="hidden" name="parent_id" value="{{ parent_id }}">
+                    <input type="hidden" name="level" value="{{ filters.level }}">
+                    <input type="hidden" name="status" value="{{ filters.status }}">
+                    <input type="hidden" name="upload_start" value="{{ filters.upload_start }}">
+                    <input type="hidden" name="upload_end" value="{{ filters.upload_end }}">
+                    <input id="q" name="q" type="text" value="{{ filters.q }}" placeholder="搜索文件或文件夹" aria-label="搜索文件或文件夹" class="explorer-search-input">
+                    <button type="submit" class="btn btn-primary">搜索</button>
+                    <button type="button" id="advancedFiltersToggle" class="btn btn-secondary" aria-controls="explorerAdvancedFilters" aria-expanded="false">高级筛选</button>
+                </form>
+
+                <div class="explorer-core-actions">
+                    <div class="explorer-upload-level-group">
+                        <label for="explorerUploadLevel" class="inline-label">上传密级</label>
+                        <select id="explorerUploadLevel" name="level" form="explorerUploadForm" required>
+                            {% for item_level in allowed_levels %}
+                                <option value="{{ item_level }}" {% if loop.first %}selected{% endif %}>{{ item_level }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="button" id="explorerUploadTrigger" class="btn btn-primary">上传</button>
+                    <button type="button" id="explorerNewFolderBtn" class="btn btn-secondary">新建文件夹</button>
+                    <button type="button" class="btn btn-secondary" data-view-mode="list">列表视图</button>
+                    <button type="button" class="btn btn-secondary" data-view-mode="icon">图标视图</button>
+                </div>
+            </div>
+        </header>
+
+        {% set advanced_filters_open = filters.level or filters.status %}
+        <form method="get" action="{{ url_for('file.file_list_page') }}" id="explorerAdvancedFilters" class="explorer-advanced-filters"{% if not advanced_filters_open %} hidden{% endif %}>
+            <input type="hidden" name="parent_id" value="{{ parent_id }}">
+            <input type="hidden" name="q" value="{{ filters.q }}">
+
+            <label class="filter-inline-label" for="level_filter">密级</label>
+            <select id="level_filter" name="level" aria-label="密级筛选">
+                <option value="" {% if not filters.level %}selected{% endif %}>全部</option>
+                {% for item_level in allowed_levels %}
+                    <option value="{{ item_level }}" {% if filters.level == item_level %}selected{% endif %}>{{ item_level }}</option>
+                {% endfor %}
+            </select>
+            <label class="filter-inline-label" for="status_filter">状态</label>
+            <select id="status_filter" name="status" aria-label="加密状态筛选">
+                <option value="" {% if not filters.status %}selected{% endif %}>全部</option>
+                <option value="未加密" {% if filters.status == '未加密' %}selected{% endif %}>未加密</option>
+                <option value="已加密" {% if filters.status == '已加密' %}selected{% endif %}>已加密</option>
+            </select>
+            <button type="submit" class="btn btn-primary">筛选</button>
+            <a href="{{ url_for('file.file_list_page', parent_id=parent_id) }}" class="btn btn-secondary">清空</a>
+        </form>
+
+        <form method="post"
+              id="explorerUploadForm"
+              action="{{ url_for('file.file_upload_submit') }}"
+              enctype="multipart/form-data"
+              class="explorer-upload-form progress-form"
+              data-expect-json="true"
+              data-progress-text="正在上传文件，请稍候...">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="parent_id" value="{{ parent_id }}">
+            <input id="explorerUploadInput" name="secret_file" type="file" class="visually-hidden" required>
+        </form>
+
+        <!-- 加密弹窗 -->
+        <div id="explorerEncryptModal" class="explorer-modal is-hidden" aria-hidden="true">
+            <div class="explorer-modal-backdrop" data-modal-close></div>
+            <div class="explorer-modal-card" role="dialog" aria-modal="true" aria-labelledby="explorerEncryptTitle">
+                <div class="explorer-modal-header">
+                    <h3 id="explorerEncryptTitle">手动加密文件</h3>
+                    <button type="button" class="explorer-modal-close" id="explorerEncryptClose" aria-label="关闭">×</button>
+                </div>
+
+                <form method="post"
+                      id="explorerEncryptForm"
+                      class="explorer-modal-form progress-form"
+                      data-expect-json="true"
+                      data-progress-text="正在加密文件，请稍候...">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" id="explorerEncryptFileGroupId" name="file_group_id" value="">
+
+                    <div class="explorer-modal-field">
+                        <label for="explorerEncryptFileName">文件名称</label>
+                        <input id="explorerEncryptFileName" type="text" readonly value="">
+                    </div>
+
+                    <div class="explorer-modal-field">
+                        <label for="explorerEncryptLevel">选择密级</label>
+                        <select id="explorerEncryptLevel" name="level" required>
+                            {% for item_level in allowed_levels %}
+                                <option value="{{ item_level }}">{{ item_level }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="field-hint">密级选择受用户权限限制：初级用户只能选择「秘密」，中级用户可选择「秘密」「机密」，高级用户和管理员可选择所有密级。</p>
+                    </div>
+
+                    <div class="explorer-modal-actions">
+                        <button type="button" class="btn btn-secondary" id="explorerEncryptCancel">取消</button>
+                        <button type="submit" class="btn btn-primary">确认加密</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="explorerNewFolderModal" class="explorer-modal is-hidden" aria-hidden="true">
+            <div class="explorer-modal-backdrop" data-modal-close></div>
+            <div class="explorer-modal-card" role="dialog" aria-modal="true" aria-labelledby="explorerNewFolderTitle">
+                <div class="explorer-modal-header">
+                    <h3 id="explorerNewFolderTitle">新建文件夹</h3>
+                    <button type="button" class="explorer-modal-close" id="explorerNewFolderClose" aria-label="关闭">×</button>
+                </div>
+
+                <form method="post"
+                      action="{{ url_for('file.folder_create_submit') }}"
+                      id="explorerNewFolderForm"
+                      class="explorer-modal-form progress-form"
+                      data-expect-json="true"
+                      data-progress-text="正在创建文件夹，请稍候...">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="parent_id" value="{{ parent_id }}">
+
+                    <div class="explorer-modal-field">
+                        <label for="explorerNewFolderName">文件夹名称</label>
+                        <input id="explorerNewFolderName" name="folder_name" type="text" value="新建文件夹" maxlength="255" required>
+                    </div>
+
+                    <div class="explorer-modal-field">
+                        <label for="explorerNewFolderLevel">文件夹密级</label>
+                        <select id="explorerNewFolderLevel" name="level" required>
+                            {% for item_level in allowed_levels %}
+                                <option value="{{ item_level }}" {% if item_level == default_new_folder_level %}selected{% endif %}>{{ item_level }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="explorer-modal-actions">
+                        <button type="button" class="btn btn-secondary" id="explorerNewFolderCancel">取消</button>
+                        <button type="submit" class="btn btn-primary">创建</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="explorer-content-panel">
+            <div id="explorerListHeader" class="explorer-list-header is-hidden" aria-hidden="true">
+                <span>名称</span>
+                <span>大小</span>
+                <span>上传时间</span>
+                <span>安全级别</span>
+                <span>状态</span>
+                <span>操作</span>
+            </div>
+
+            <div id="explorerItemsContainer" class="explorer-items-grid is-icon-view" data-view-mode="icon">
+                {% if directory_items %}
+                    {% for item in directory_items %}
+                        <article class="explorer-item-card"
+                             data-item-id="{{ item.id }}"
+                             data-item-key="{{ 'folder-' ~ item.id if item.is_folder else 'file-' ~ item.id }}"
+                             data-item-kind="{{ 'folder' if item.is_folder else 'file' }}"
+                             data-item-name="{{ item.name }}"
+                             data-item-level="{{ item.level }}"
+                             data-item-status="{{ item.status if not item.is_folder else '' }}"
+                             data-file-group-id="{{ item.file_group_id if not item.is_folder else '' }}"
+                             data-open-url="{{ url_for('file.file_list_page', parent_id=item.id) if item.is_folder else '' }}"
+                             data-download-url="{{ url_for('file.file_download_latest', file_group_id=item.file_group_id) if not item.is_folder else '' }}"
+                             data-delete-url="{{ url_for('file.file_item_delete_submit', item_id=item.id) }}"
+                             data-rename-url="{{ url_for('file.folder_rename_submit', folder_id=item.id) if item.is_folder else '' }}"
+                             data-encrypt-url="{{ url_for('file.file_manual_encrypt', file_group_id=item.file_group_id) if not item.is_folder and item.status == '未加密' else '' }}"
+                             data-can-download="{{ '1' if item.can_download else '0' }}"
+                             data-can-delete="{{ '1' if item.can_delete else '0' }}">
+                        <button type="button" class="explorer-item-hit" aria-label="{{ item.name }}">
+                            <span class="explorer-item-name-cell">
+                                <span class="explorer-item-icon icon-{{ item.icon_type }}">
+                                    {% if item.icon_type == 'word' %}W{% elif item.icon_type == 'excel' %}X{% elif item.icon_type == 'ppt' %}P{% elif item.icon_type == 'pdf' %}PDF{% elif item.icon_type == 'folder' %}{% else %}FILE{% endif %}
+                                </span>
+                                <span class="explorer-item-name">{{ item.name }}</span>
+                            </span>
+                            <span class="explorer-item-meta explorer-item-size">{{ item.size_text }}</span>
+                            <span class="explorer-item-meta explorer-item-uploaded">{{ item.uploaded_text }}</span>
+                            <span class="explorer-item-meta explorer-item-level">{{ item.level }}</span>
+                            {% if not item.is_folder %}
+                            <span class="explorer-item-meta explorer-item-status status-{{ 'encrypted' if item.status == '已加密' else 'unencrypted' }}">
+                                {{ item.status }}
+                            </span>
+                            {% endif %}
+                        </button>
+
+                        <div class="explorer-item-actions">
+                            {% if item.is_folder %}
+                                <a class="btn btn-secondary"
+                                   href="{{ url_for('file.file_list_page', parent_id=item.id) }}"
+                                   data-inline-action="open">打开</a>
+                            {% else %}
+                                <a class="btn btn-secondary progress-download"
+                                   href="{{ url_for('file.file_download_latest', file_group_id=item.file_group_id) }}"
+                                   data-progress-text="正在下载文件，请稍候..."
+                                   data-download-name="{{ item.name }}"
+                                   data-inline-action="download">下载</a>
+                                {% if item.status == '未加密' %}
+                                <button type="button" class="btn btn-primary"
+                                        data-inline-action="encrypt"
+                                        data-file-group-id="{{ item.file_group_id }}"
+                                        data-file-name="{{ item.name }}">加密</button>
+                                {% endif %}
+                                <a class="btn btn-secondary"
+                                   href="{{ url_for('file.file_detail_page', file_group_id=item.file_group_id) }}"
+                                   data-inline-action="detail">详情</a>
+                            {% endif %}
+
+                            {% if item.can_delete %}
+                                <button type="button" class="btn btn-muted" data-inline-action="delete">删除</button>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            {% else %}
+                {% if has_active_filters %}
+                    <div class="explorer-empty">当前筛选条件下无匹配的文件/文件夹</div>
+                {% else %}
+                    <div class="explorer-empty">当前目录暂无文件或文件夹</div>
+                {% endif %}
+            {% endif %}
+            </div>
+        </div>
+
+        <div id="explorerContextMenu" class="explorer-context-menu is-hidden" role="menu" aria-hidden="true">
+            <button type="button" class="menu-item" data-menu-action="pin">置顶</button>
+            <button type="button" class="menu-item" data-menu-action="open">打开</button>
+            <button type="button" class="menu-item" data-menu-action="download">下载</button>
+            <button type="button" class="menu-item" data-menu-action="encrypt">加密</button>
+            <button type="button" class="menu-item" data-menu-action="rename">重命名</button>
+            <button type="button" class="menu-item danger" data-menu-action="delete">删除</button>
+        </div>
+    </section>
+
+    <div id="cryptoProgressPanel" class="crypto-progress-panel is-hidden" aria-live="polite" aria-atomic="true">
+        <div class="crypto-progress-card">
+            <p id="cryptoProgressText">正在处理...</p>
+            <div class="crypto-progress-track">
+                <div id="cryptoProgressBar" class="crypto-progress-bar"></div>
+            </div>
+            <span id="cryptoProgressPercent">0%</span>
+        </div>
+    </div>
+{% endblock %}
+
+{% block page_js %}
+    <script src="{{ url_for('static', filename='js/file_module.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/file_encrypt_modal.js') }}" defer></script>
+{% endblock %}

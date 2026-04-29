@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% set active_nav = "files" %}
+{% set show_file_workspace = true %}
+
+{% block page_title %}文件详情{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/file_module.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="file-detail-page-wrapper">
+    <!-- 文件详情卡片 -->
+    <section class="panel-card file-detail-panel">
+        <h2>文件详情</h2>
+        <div class="file-detail-list">
+            <div class="detail-item-single">
+                <span class="detail-label">文件名</span>
+                <span class="detail-value">{{ file_item.name }}</span>
+            </div>
+            <div class="detail-item-single">
+                <span class="detail-label">当前版本</span>
+                <span class="detail-value">{{ file_item.version }}</span>
+            </div>
+            <div class="detail-item-single">
+                <span class="detail-label">文件大小</span>
+                <span class="detail-value">{{ file_item.file_size }} B</span>
+            </div>
+            <div class="detail-item-single">
+                <span class="detail-label">上传时间</span>
+                <span class="detail-value">{{ file_item.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+            </div>
+            <div class="detail-item-single">
+                <span class="detail-label">密级</span>
+                <span class="detail-value security-badge level-{{ 'admin' if file_item.level == '绝密' else ('advanced' if file_item.level == '机密' else 'basic') }}">{{ file_item.level }}</span>
+            </div>
+            <div class="detail-item-single">
+                <span class="detail-label">上传者</span>
+                <span class="detail-value">{{ file_item.uploader_type }}#{{ file_item.uploader_id }}</span>
+            </div>
+        </div>
+        <!-- 操作按钮行 -->
+        <div class="file-detail-actions">
+            <a class="btn btn-secondary progress-download"
+               href="{{ url_for('file.file_download_latest', file_group_id=file_item.file_group_id) }}"
+               data-progress-text="正在自动解密并下载当前版本..."
+               data-download-name="{{ file_item.name }}">下载当前版本</a>
+            <a class="btn btn-secondary progress-download"
+               href="{{ url_for('file.file_manual_decrypt', file_group_id=file_item.file_group_id) }}"
+               data-progress-text="正在手动解密并下载文件..."
+               data-download-name="{{ file_item.name }}.decrypted">手动解密下载</a>
+        </div>
+    </section>
+
+    <!-- 保存新版本卡片 -->
+    <section class="panel-card file-version-panel">
+        <h2>保存新版本</h2>
+        {% if can_manage %}
+            <form method="post"
+                  action="{{ url_for('file.file_update_submit', file_group_id=file_item.file_group_id) }}"
+                  enctype="multipart/form-data"
+                  class="file-version-form progress-form"
+                  data-progress-text="正在加密并保存新版本，请稍候...">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-row">
+                    <label class="form-label" for="name">文件名</label>
+                    <input id="name" name="name" type="text" value="{{ file_item.name }}" maxlength="255" required class="form-input-wide">
+                </div>
+
+                <div class="form-row">
+                    <label class="form-label" for="level">密级</label>
+                    {% if can_change_level %}
+                        <select id="level" name="level" required class="form-input-wide">
+                            <option value="秘密" {% if file_item.level == '秘密' %}selected{% endif %}>秘密</option>
+                            <option value="机密" {% if file_item.level == '机密' %}selected{% endif %}>机密</option>
+                            <option value="绝密" {% if file_item.level == '绝密' %}selected{% endif %}>绝密</option>
+                        </select>
+                    {% else %}
+                        <input type="hidden" name="level" value="{{ file_item.level }}">
+                        <div class="form-info-line">文件密级仅管理员可修改，当前保持为：<span class="security-badge level-{{ 'admin' if file_item.level == '绝密' else ('advanced' if file_item.level == '机密' else 'basic') }}">{{ file_item.level }}</span></div>
+                    {% endif %}
+                </div>
+
+                <div class="form-row">
+                    <label class="form-label" for="secret_file">新文件内容</label>
+                    <input id="secret_file" name="secret_file" type="file" required class="form-file-input">
+                </div>
+
+                {% if is_admin %}
+                <div class="form-row">
+                    <label class="form-label" for="major_version">主版本号（管理员可改）</label>
+                    <input id="major_version" name="major_version" type="number" min="1" placeholder="留空则按当前主版本递增次版本" class="form-input-wide">
+                </div>
+                {% endif %}
+
+                <div class="form-submit-row">
+                    <button type="submit" class="btn btn-primary">保存新版本</button>
+                </div>
+            </form>
+
+            <form method="post"
+                  action="{{ url_for('file.file_manual_encrypt', file_group_id=file_item.file_group_id) }}"
+                  class="inline-form progress-form"
+                  data-progress-text="正在执行手动加密（密钥轮换）..."
+                  data-confirm-text="确认执行手动加密并轮换当前版本密钥吗？">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-submit-row">
+                    <button type="submit" class="btn btn-secondary">手动加密当前版本</button>
+                </div>
+            </form>
+        {% else %}
+            <p class="permission-denied-msg">当前账号无权修改该文件。</p>
+        {% endif %}
+    </section>
+</div>
+
+<div id="cryptoProgressPanel" class="crypto-progress-panel is-hidden" aria-live="polite" aria-atomic="true">
+    <div class="crypto-progress-card">
+        <p id="cryptoProgressText">正在处理...</p>
+        <div class="crypto-progress-track">
+            <div id="cryptoProgressBar" class="crypto-progress-bar"></div>
+        </div>
+        <span id="cryptoProgressPercent">0%</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+    <script src="{{ url_for('static', filename='js/file_module.js') }}" defer></script>
+{% endblock %}

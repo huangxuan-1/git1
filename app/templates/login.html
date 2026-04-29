@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% set show_app_shell = true %}
+{% set active_nav = "profile" %}
+{% set page_heading = "系统登录" %}
+{% set page_subheading = "请输入账号信息，完成第一步口令认证" %}
+
+{% block page_title %}系统登录{% endblock %}
+
+{% block content %}
+    {% set form = login_form or {} %}
+    {% set show_customer_id = form.get('account_type') == 'customer' %}
+    <section class="panel-card login-panel">
+        <h2>账号登录</h2>
+        <form method="post" action="{{ url_for('auth.login') }}" class="form-grid login-form">
+            <select id="account_type" name="account_type" class="form-select-placeholder" aria-label="账号类型" required>
+                <option value="" disabled {% if not form.get('account_type') %}selected{% endif %}>请选择账号类型</option>
+                <option value="customer" {% if form.get('account_type') == 'customer' %}selected{% endif %}>用户</option>
+                <option value="administrator" {% if form.get('account_type') == 'administrator' %}selected{% endif %}>管理员</option>
+            </select>
+
+            <div id="loginUserIdField" class="login-user-id-field" {% if not show_customer_id %}hidden{% endif %}>
+                <input
+                    id="customer_id"
+                    name="customer_id"
+                    type="text"
+                    maxlength="5"
+                    inputmode="numeric"
+                    pattern="^\d{5}$"
+                    placeholder="请输入5位用户ID"
+                    aria-label="用户ID"
+                    value="{{ form.get('customer_id', '') }}"
+                    {% if show_customer_id %}required{% endif %}
+                >
+            </div>
+
+            <input id="username" name="username" type="text" maxlength="50" autocomplete="username" placeholder="用户名" aria-label="用户名" value="{{ form.get('username', '') }}" required>
+
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="密码" aria-label="密码" required>
+
+            <button type="submit" class="btn btn-primary">登录系统</button>
+
+            <div class="login-footer-links">
+                <a href="{{ url_for('auth.forgot_password_page') }}" class="forgot-password-link">忘记密码？</a>
+            </div>
+        </form>
+    </section>
+{% endblock %}
+
+{% block page_js %}
+    <script src="{{ url_for('static', filename='js/auth_form_helpers.js') }}" defer></script>
+{% endblock %}

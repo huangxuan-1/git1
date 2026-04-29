@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% set active_nav = "admin" %}
+
+{% block page_title %}系统设置{% endblock %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/abac_module.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-page-wrapper">
+    <!-- 顶部标题栏 -->
+    <header class="profile-header">
+        <h1>系统设置</h1>
+        <div class="header-meta">
+            <span class="system-version">涉密信息管理系统 v1.0</span>
+        </div>
+    </header>
+
+    <!-- 文件密级设置卡片 -->
+    <section class="panel-card settings-main-panel">
+        <div class="settings-toolbar">
+            <div class="settings-tabs" role="tablist" aria-label="系统设置标签">
+                <a class="settings-tab" role="tab" aria-selected="false" href="{{ url_for('abac.permission_management_page') }}">用户设置</a>
+                <a class="settings-tab is-active" role="tab" aria-selected="true" href="{{ url_for('abac.file_level_management_page') }}">文件密级设置</a>
+            </div>
+            <h2>文件密级设置</h2>
+        </div>
+
+        <div class="table-wrap table-container">
+            <table class="module-abac-table">
+                <thead>
+                    <tr>
+                        <th>文件名</th>
+                        <th>当前版本</th>
+                        <th>当前密级</th>
+                        <th>上传者</th>
+                        <th>上传时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if files %}
+                        {% for file_item in files %}
+                            <tr>
+                                <td>{{ file_item.name }}</td>
+                                <td>{{ file_item.version }}</td>
+                                <td>{{ file_item.level }}</td>
+                                <td>{{ file_item.uploader_type }}#{{ file_item.uploader_id }}</td>
+                                <td>{{ file_item.uploaded_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    <form method="post" action="{{ url_for('abac.update_file_level', file_group_id=file_item.file_group_id) }}" class="abac-inline-form">
+                                        <select name="level" required>
+                                            {% for level in file_levels %}
+                                                <option value="{{ level }}" {% if file_item.level == level %}selected{% endif %}>{{ level }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn btn-primary btn-small">更新密级</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="empty-cell">暂无可设置密级的文件</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
