@@ -334,7 +334,18 @@ def _save_face_feature(action_name: str):
         # 提取人脸特征（使用基础人脸照片）
         feature_vector = service.extract_face_encoding(base_photo_image)
 
-        # 加密特征模板
+        # 将face_token解码出来
+        token_bytes = feature_vector.tobytes()
+        face_token = token_bytes.decode('utf-8')
+
+        # 注册人脸到百度云用户组（用于后续登录搜索）
+        try:
+            service.register_face_to_group(base_photo_image, face_token, "registered_users")
+            current_app.logger.info(f"人脸注册到百度云用户组成功，face_token: {face_token}")
+        except FaceServiceError as e:
+            current_app.logger.warning(f"人脸注册到百度云用户组失败: {e}，但继续本地存储")
+
+        # 加密特征模板（本地存储）
         encrypted_template = service.encrypt_feature_vector(
             feature_vector,
             current_app.config["FACE_FEATURE_AES_KEY"],
@@ -583,22 +594,45 @@ def face_liveness_video_check():
         base_photo_image = service.decode_data_url_image(base_photo_data)
         neutral_image = service.decode_data_url_image(neutral_image_data)
 
-        # 演示模式：完全跳过API调用，直接返回成功
-        liveness_result = {
-            "face_present": True,
-            "is_live": True,
-            "liveness_score": 0.85,
-            "face_token": "demo_token",
-            "message": "活体检测通过（演示模式）",
-        }
+        # 调用百度云活体检测接口
+        liveness_result = service.verify_face_liveness(neutral_image)
+        current_app.logger.info(f"活体检测结果: {liveness_result}")
 
-        # 演示模式：直接通过人脸一致性比对
-        consistency_result = type('obj', (object,), {
-            'is_match': True,
-            'similarity': 0.92
-        })()
+        if not liveness_result.get("face_present", False):
+            _record_audit(
+                operation_type="人脸录入",
+                detail="活体检测失败：未检测到人脸。",
+                is_success=False,
+                customer_id=customer_id,
+            )
+            db.session.commit()
+            return jsonify({"status": "error", "message": "未检测到人脸，请确保画面中有人脸。"}), 400
 
+        if not liveness_result.get("is_live", False):
+            _record_audit(
+                operation_type="人脸录入",
+                detail=f"活体检测失败：活体分数={liveness_result.get('liveness_score', 0):.2f}。",
+                is_success=False,
+                customer_id=customer_id,
+            )
+            db.session.commit()
+            return jsonify({"status": "error", "message": f"活体检测未通过，分数: {liveness_result.get('liveness_score', 0):.2f}，请使用真人进行验证。"}), 400
+
+        # 人脸一致性比对（使用百度云1:1比对）
         consistency_threshold = 0.6
+        try:
+            # 提取基础人脸特征
+            base_encoding = service.extract_face_encoding(base_photo_image)
+            # 提取活体帧人脸特征
+            neutral_encoding = service.extract_face_encoding(neutral_image)
+            # 比对两帧人脸
+            consistency_result = service.compare_feature_vectors(base_encoding, neutral_encoding, consistency_threshold)
+        except FaceServiceError as e:
+            current_app.logger.warning(f"人脸比对失败，尝试使用图像直接比对: {e}")
+            # 如果提取特征失败，尝试直接用图像比对
+            consistency_result = service.compare_feature_vectors(base_photo_image, neutral_image, consistency_threshold)
+
+        current_app.logger.info(f"人脸一致性比对结果: similarity={consistency_result.similarity}, is_match={consistency_result.is_match}")
 
         if not consistency_result.is_match:
             _record_audit(
@@ -691,22 +725,45 @@ def face_liveness_match_check():
         base_photo_image = service.decode_data_url_image(base_photo_data)
         liveness_image = service.decode_data_url_image(liveness_frame_data)
 
-        # 演示模式：完全跳过API调用，直接返回成功
-        liveness_result = {
-            "face_present": True,
-            "is_live": True,
-            "liveness_score": 0.85,
-            "face_token": "demo_token",
-            "message": "活体检测通过（演示模式）",
-        }
+        # 调用百度云活体检测接口
+        liveness_result = service.verify_face_liveness(liveness_image)
+        current_app.logger.info(f"活体检测结果: {liveness_result}")
 
-        # 演示模式：直接通过人脸一致性比对
-        consistency_result = type('obj', (object,), {
-            'is_match': True,
-            'similarity': 0.92
-        })()
+        if not liveness_result.get("face_present", False):
+            _record_audit(
+                operation_type="人脸录入",
+                detail="活体检测失败：未检测到人脸。",
+                is_success=False,
+                customer_id=customer_id,
+            )
+            db.session.commit()
+            return jsonify({"status": "error", "message": "未检测到人脸，请确保画面中有人脸。"}), 400
 
+        if not liveness_result.get("is_live", False):
+            _record_audit(
+                operation_type="人脸录入",
+                detail=f"活体检测失败：活体分数={liveness_result.get('liveness_score', 0):.2f}。",
+                is_success=False,
+                customer_id=customer_id,
+            )
+            db.session.commit()
+            return jsonify({"status": "error", "message": f"活体检测未通过，分数: {liveness_result.get('liveness_score', 0):.2f}，请使用真人进行验证。"}), 400
+
+        # 人脸一致性比对（使用百度云1:1比对）
         consistency_threshold = 0.6
+        try:
+            # 提取基础人脸特征
+            base_encoding = service.extract_face_encoding(base_photo_image)
+            # 提取活体帧人脸特征
+            liveness_encoding = service.extract_face_encoding(liveness_image)
+            # 比对两帧人脸
+            consistency_result = service.compare_feature_vectors(base_encoding, liveness_encoding, consistency_threshold)
+        except FaceServiceError as e:
+            current_app.logger.warning(f"人脸特征提取失败，尝试使用图像直接比对: {e}")
+            # 如果提取特征失败，尝试直接用图像比对
+            consistency_result = service.compare_feature_vectors(base_photo_image, liveness_image, consistency_threshold)
+
+        current_app.logger.info(f"人脸一致性比对结果: similarity={consistency_result.similarity}, is_match={consistency_result.is_match}")
 
         if not consistency_result.is_match:
             _record_audit(

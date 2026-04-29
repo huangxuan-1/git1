@@ -1450,13 +1450,31 @@ def face_verify_step():
             "人脸图像",
         )
 
-        # 演示模式：直接通过活体检测
-        liveness_result = {
-            "face_present": True,
-            "is_live": True,
-            "liveness_score": 0.85,
-            "message": "活体检测通过（演示模式）",
-        }
+        # 调用百度云活体检测接口
+        liveness_result = service.verify_face_liveness(liveness_image)
+        current_app.logger.info(f"登录人脸活体检测结果: {liveness_result}")
+
+        if not liveness_result.get("face_present", False):
+            _increment_biometric_fail_and_lock(
+                pending_user,
+                stage_name="人脸",
+                reason="未检测到人脸",
+            )
+            db.session.commit()
+            _clear_pending_auth_state()
+            flash("未检测到人脸，请从第一步重新认证。", "danger")
+            return redirect(url_for("auth.login"))
+
+        if not liveness_result.get("is_live", False):
+            _increment_biometric_fail_and_lock(
+                pending_user,
+                stage_name="人脸",
+                reason=f"活体检测未通过，分数={liveness_result.get('liveness_score', 0):.2f}",
+            )
+            db.session.commit()
+            _clear_pending_auth_state()
+            flash(f"活体检测未通过，请从第一步重新认证。", "danger")
+            return redirect(url_for("auth.login"))
 
         encrypted_template = pending_user.face_feature_encrypted
         if not encrypted_template:
@@ -1478,13 +1496,13 @@ def face_verify_step():
             flash("未找到已注册人脸模板，请从第一步重新认证。", "danger")
             return redirect(url_for("auth.login"))
 
-        # 提取人脸特征
-        probe_vector = service.extract_face_encoding(liveness_image)
-        face_match_threshold = 0.6  # 放宽阈值便于演示
+        # 提取人脸特征并比对
+        # 注意：compare_with_encrypted_template现在需要图像而不是face_token
+        face_match_threshold = 0.6
 
-        # 与已存储模板比对
+        # 与已存储模板比对（使用人脸搜索）
         verify_result = service.compare_with_encrypted_template(
-            current_vector=probe_vector,
+            current_vector=liveness_image,  # 直接传递图像
             encrypted_template=encrypted_template,
             aes_key=current_app.config["FACE_FEATURE_AES_KEY"],
             threshold=face_match_threshold,

@@ -715,65 +715,300 @@ class FaceVerificationService:
         参数：
             vector_a (np.ndarray): 特征向量 A（face_token字节数组或图像）。
             vector_b (np.ndarray): 特征向量 B（face_token字节数组或图像）。
-            threshold (float): 匹配阈值，默认 0.65。
+            threshold (float): 匹配阈值，默认 0.6。
         返回值：
             FaceVerificationResult: 比对结果对象。
         注意事项：
-            支持face_token与图像、图像与图像、face_token与face_token的比对。
+            支持图像与图像的比对。face_token有时间限制，不适合长期存储后比对。
         """
         try:
-            # 将numpy数组转换回face_token或图像
-            def get_face_token_or_image(vector):
+            # 获取access_token
+            access_token = self._get_access_token()
+
+            # 构建比对参数 - 使用图像方式
+            def prepare_image_param(vector):
                 # 尝试解码为face_token
                 try:
                     token_bytes = vector.tobytes()
                     face_token = token_bytes.decode('utf-8')
-                    # 检查是否是有效的face_token格式
-                    if len(face_token) > 10 and face_token.startswith('FACE_'):
-                        return {'face_token': face_token}
+                    # 检查是否是有效的face_token格式（百度云face_token以特定字符开头）
+                    if len(face_token) > 20 and not face_token.startswith('legacy_'):
+                        # face_token已过期，不能用于比对，需要重新提取特征
+                        print(f"[人脸比对] face_token可能已过期: {face_token[:20]}...")
                 except:
                     pass
 
-                # 如果不是face_token，则认为是图像
                 # 将BGR图像转换为RGB JPEG base64
-                rgb_image = cv2.cvtColor(vector, cv2.COLOR_BGR2RGB)
-                success, encoded_image = cv2.imencode('.jpg', rgb_image)
-                if not success:
-                    raise FaceServiceError("图像编码失败，无法进行人脸比对。")
-
-                image_bytes = encoded_image.tobytes()
-                image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                return {'image': image_base64, 'image_type': 'BASE64'}
-
-            param_a = get_face_token_or_image(vector_a)
-            param_b = get_face_token_or_image(vector_b)
-
-            # 构建百度云人脸比对参数
-            match_params = []
-            for param in [param_a, param_b]:
-                if 'face_token' in param:
-                    match_params.append({'face_token': param['face_token']})
+                if vector.dtype == np.uint8 and len(vector.shape) == 3:
+                    # 这是图像
+                    rgb_image = cv2.cvtColor(vector, cv2.COLOR_BGR2RGB)
+                    success, encoded_image = cv2.imencode('.jpg', rgb_image, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                    if not success:
+                        raise FaceServiceError("图像编码失败，无法进行人脸比对。")
+                    image_bytes = encoded_image.tobytes()
+                    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                    return {'image': image_base64, 'image_type': 'BASE64'}
                 else:
-                    match_params.append({'image': param['image'], 'image_type': param['image_type']})
+                    # 这是face_token字节数组，尝试解码并重新提取人脸
+                    # 由于face_token会过期，我们需要从原始图像重新提取
+                    raise FaceServiceError("存储的人脸特征已过期，需要重新注册。")
+
+            param_a = prepare_image_param(vector_a)
+            param_b = prepare_image_param(vector_b)
 
             # 调用百度云人脸比对接口
-            result = self.client.match(match_params)
+            url = f"https://aip.baidubce.com/rest/2.0/face/v3/match"
+            match_params = [param_a, param_b]
+            params = {"access_token": access_token}
+            headers = {"Content-Type": "application/json"}
+
+            print(f"[人脸比对] 请求URL: {url}")
+            print(f"[人脸比对] 参数数量: {len(match_params)}")
+
+            response = requests.post(url, json=match_params, params=params, headers=headers, timeout=20)
+            result = response.json()
+
+            print(f"[人脸比对] API响应: {result}")
 
             if 'error_code' in result and result['error_code'] != 0:
+                error_code = result['error_code']
                 error_msg = result.get('error_msg', '未知错误')
-                raise FaceServiceError(f"人脸比对失败: {error_msg}")
+                print(f"[人脸比对] 错误: error_code={error_code}, error_msg={error_msg}")
+
+                if error_code == 222202:  # 图片中没有人脸
+                    raise FaceServiceError("未检测到人脸，请确保画面中有人脸。")
+                elif error_code == 222203:
+                    raise FaceServiceError("人脸解析失败，请确保人脸清晰。")
+                else:
+                    raise FaceServiceError(f"人脸比对失败: {error_msg} (错误码: {error_code})")
 
             if 'result' not in result or 'score' not in result['result']:
                 raise FaceServiceError("人脸比对失败，未返回有效结果。")
 
-            similarity = float(result['result']['score']) / 100.0  # 百度云返回0-100分，转换为0-1
+            # 百度云返回的score是0-100的范围
+            raw_score = float(result['result']['score'])
+            similarity = raw_score / 100.0  # 转换为0-1范围
             is_match = bool(similarity >= threshold)
+
+            print(f"[人脸比对] 原始分数: {raw_score}, 相似度: {similarity:.4f}, 阈值: {threshold}, 是否匹配: {is_match}")
 
             return FaceVerificationResult(similarity=similarity, is_match=is_match)
         except FaceServiceError:
             raise
+        except requests.exceptions.Timeout:
+            raise FaceServiceError("人脸比对请求超时，请稍后重试。")
+        except requests.exceptions.RequestException as exc:
+            raise FaceServiceError(f"人脸比对网络错误: {str(exc)}")
         except Exception as exc:
+            print(f"[人脸比对] 异常: {exc}")
+            import traceback
+            traceback.print_exc()
             raise FaceServiceError("人脸特征比对失败，请稍后重试。") from exc
+
+    def register_face_to_group(self, image_bgr: np.ndarray, user_id: str, group_id: str = "registered_users") -> str:
+        """
+        功能：将人脸注册到百度云用户组，用于后续人脸搜索。
+        参数：
+            image_bgr (np.ndarray): 人脸图像。
+            user_id (str): 用户标识（建议使用用户ID）。
+            group_id (str): 用户组ID，默认为 "registered_users"。
+        返回值：
+            str: face_token。
+        注意事项：
+            此方法将人脸特征注册到百度云端，用于登录时的人脸搜索。
+            如果用户组不存在会自动创建。
+        """
+        try:
+            # 获取access_token
+            access_token = self._get_access_token()
+
+            # 将BGR图像转换为RGB JPEG
+            rgb_image = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+            success, encoded_image = cv2.imencode('.jpg', rgb_image, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            if not success:
+                raise FaceServiceError("图像编码失败。")
+
+            image_bytes = encoded_image.tobytes()
+            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+
+            # 调用人脸注册接口
+            url = f"https://aip.baidubce.com/rest/2.0/face/v3/faceset/user/add"
+            payload = {
+                "image": image_base64,
+                "image_type": "BASE64",
+                "group_id": group_id,
+                "user_id": user_id,
+                "user_info": "",  # 可选的用户信息
+                "quality_control": "NORMAL",  # 质量控制
+                "liveness_control": "NORMAL",  # 活体控制
+            }
+            params = {"access_token": access_token}
+            headers = {"Content-Type": "application/json"}
+
+            print(f"[人脸注册] 请求URL: {url}")
+            print(f"[人脸注册] 用户ID: {user_id}, 用户组: {group_id}")
+
+            response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+            result = response.json()
+
+            print(f"[人脸注册] API响应: {result}")
+
+            if 'error_code' in result and result['error_code'] != 0:
+                error_code = result['error_code']
+                error_msg = result.get('error_msg', '未知错误')
+                print(f"[人脸注册] 错误: error_code={error_code}, error_msg={error_msg}")
+
+                if error_code == 216616:  # 组不存在，需要先创建
+                    print("[人脸注册] 用户组不存在，先创建用户组...")
+                    self._create_face_group(group_id, access_token)
+                    # 重新注册
+                    response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+                    result = response.json()
+                    print(f"[人脸注册] 重试注册响应: {result}")
+
+                    if 'error_code' in result and result['error_code'] != 0:
+                        raise FaceServiceError(f"人脸注册失败: {result.get('error_msg', '未知错误')}")
+
+                elif error_code == 222202:
+                    raise FaceServiceError("未检测到人脸，请确保画面中有人脸。")
+                elif error_code == 222203:
+                    raise FaceServiceError("人脸解析失败，请确保人脸清晰。")
+                else:
+                    raise FaceServiceError(f"人脸注册失败: {error_msg} (错误码: {error_code})")
+
+            face_token = result.get('result', {}).get('face_token', '')
+            if not face_token:
+                raise FaceServiceError("人脸注册成功但未获取到face_token。")
+
+            print(f"[人脸注册] 成功，face_token: {face_token}")
+            return face_token
+
+        except FaceServiceError:
+            raise
+        except requests.exceptions.Timeout:
+            raise FaceServiceError("人脸注册请求超时，请稍后重试。")
+        except requests.exceptions.RequestException as exc:
+            raise FaceServiceError(f"人脸注册网络错误: {str(exc)}")
+        except Exception as exc:
+            print(f"[人脸注册] 异常: {exc}")
+            import traceback
+            traceback.print_exc()
+            raise FaceServiceError("人脸注册失败，请稍后重试。") from exc
+
+    def _create_face_group(self, group_id: str, access_token: str) -> None:
+        """
+        功能：创建百度云人脸用户组。
+        参数：
+            group_id (str): 用户组ID。
+            access_token (str): API访问令牌。
+        返回值：
+            None
+        注意事项：
+            内部方法，用于在用户组不存在时自动创建。
+        """
+        url = f"https://aip.baidubce.com/rest/2.0/face/v3/faceset/group/add"
+        payload = {"group_id": group_id}
+        params = {"access_token": access_token}
+        headers = {"Content-Type": "application/json"}
+
+        print(f"[创建用户组] 请求URL: {url}, group_id: {group_id}")
+
+        response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+        result = response.json()
+
+        print(f"[创建用户组] API响应: {result}")
+
+        if 'error_code' in result and result['error_code'] != 0:
+            error_msg = result.get('error_msg', '未知错误')
+            raise FaceServiceError(f"创建用户组失败: {error_msg}")
+
+        print(f"[创建用户组] 成功创建用户组: {group_id}")
+
+    def search_face_in_group(self, image_bgr: np.ndarray, group_id: str = "registered_users", threshold: float = 0.6) -> dict:
+        """
+        功能：在用户组中搜索人脸。
+        参数：
+            image_bgr (np.ndarray): 待搜索的人脸图像。
+            group_id (str): 用户组ID。
+            threshold (float): 匹配阈值。
+        返回值：
+            dict: 搜索结果。
+                - matched: 是否找到匹配
+                - user_id: 匹配的用户ID
+                - similarity: 相似度
+                - face_token: 匹配的face_token
+        注意事项：
+            用于登录时的人脸验证。
+        """
+        try:
+            access_token = self._get_access_token()
+
+            # 将BGR图像转换为RGB JPEG
+            rgb_image = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+            success, encoded_image = cv2.imencode('.jpg', rgb_image, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            if not success:
+                raise FaceServiceError("图像编码失败。")
+
+            image_bytes = encoded_image.tobytes()
+            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+
+            # 调用人脸搜索接口
+            url = f"https://aip.baidubce.com/rest/2.0/face/v3/search"
+            payload = {
+                "image": image_base64,
+                "image_type": "BASE64",
+                "group_id_list": group_id,
+                "max_face_num": 1,
+                "match_threshold": int(threshold * 100),
+            }
+            params = {"access_token": access_token}
+            headers = {"Content-Type": "application/json"}
+
+            print(f"[人脸搜索] 请求URL: {url}")
+            print(f"[人脸搜索] 搜索用户组: {group_id}, 阈值: {threshold}")
+
+            response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
+            result = response.json()
+
+            print(f"[人脸搜索] API响应: {result}")
+
+            if 'error_code' in result and result['error_code'] != 0:
+                error_code = result['error_code']
+                error_msg = result.get('error_msg', '未知错误')
+
+                if error_code == 216616:  # 组不存在
+                    return {"matched": False, "user_id": "", "similarity": 0.0, "face_token": "", "message": "人脸库不存在"}
+                elif error_code == 222202:
+                    raise FaceServiceError("未检测到人脸，请确保画面中有人脸。")
+                else:
+                    raise FaceServiceError(f"人脸搜索失败: {error_msg}")
+
+            if 'result' not in result or 'user_list' not in result['result']:
+                return {"matched": False, "user_id": "", "similarity": 0.0, "face_token": ""}
+
+            user_list = result['result']['user_list']
+            if len(user_list) == 0:
+                return {"matched": False, "user_id": "", "similarity": 0.0, "face_token": ""}
+
+            best_match = user_list[0]
+            raw_score = best_match.get('score', 0)
+            similarity = raw_score / 100.0
+            matched = bool(similarity >= threshold)
+
+            return {
+                "matched": matched,
+                "user_id": best_match.get('user_id', ''),
+                "similarity": similarity,
+                "face_token": best_match.get('face_token', ''),
+            }
+
+        except FaceServiceError:
+            raise
+        except Exception as exc:
+            print(f"[人脸搜索] 异常: {exc}")
+            import traceback
+            traceback.print_exc()
+            raise FaceServiceError("人脸搜索失败，请稍后重试。") from exc
 
     def compare_with_encrypted_template(
         self,
@@ -783,21 +1018,59 @@ class FaceVerificationService:
         threshold: float = FACE_MATCH_THRESHOLD,
     ) -> FaceVerificationResult:
         """
-        功能：将当前向量与数据库加密模板进行比对。
+        功能：将当前人脸图像与数据库加密模板进行比对。
         参数：
-            current_vector (np.ndarray): 当前提取的人脸特征向量（图像或face_token）。
-            encrypted_template (str): 数据库存储的加密模板。
+            current_vector (np.ndarray): 当前采集的人脸图像。
+            encrypted_template (str): 数据库存储的加密模板（face_token）。
             aes_key (bytes): 32 字节 AES 密钥。
             threshold (float): 匹配阈值。
         返回值：
             FaceVerificationResult: 比对结果对象。
         注意事项：
-            内部会自动完成模板解密和百度云人脸比对。
+            使用人脸搜索接口在用户组中查找匹配的人脸。
         """
-        # 解密模板，得到face_token的字节表示
-        stored_vector = self.decrypt_feature_vector(encrypted_template, aes_key)
-        # 调用compare_feature_vectors进行比对
-        return self.compare_feature_vectors(current_vector, stored_vector, threshold)
+        try:
+            # 解密模板，得到face_token的字节表示
+            stored_vector = self.decrypt_feature_vector(encrypted_template, aes_key)
+
+            # 尝试解码为face_token
+            token_bytes = stored_vector.tobytes()
+            stored_face_token = token_bytes.decode('utf-8')
+
+            # 检查是否是legacy特征
+            if stored_face_token.startswith('legacy_feature_'):
+                raise FaceServiceError("人脸特征已过期，请重新注册人脸。")
+
+            # 确保current_vector是图像
+            if current_vector.dtype != np.uint8 or len(current_vector.shape) != 3:
+                raise FaceServiceError("当前人脸数据格式错误，请重新采集。")
+
+            # 使用人脸搜索接口
+            search_result = self.search_face_in_group(current_vector, "registered_users", threshold)
+
+            if not search_result.get("matched", False):
+                return FaceVerificationResult(similarity=search_result.get("similarity", 0.0), is_match=False)
+
+            # 验证搜索到的face_token是否与存储的一致
+            matched_face_token = search_result.get("face_token", "")
+            matched_user_id = search_result.get("user_id", "")
+
+            # 如果user_id与存储的face_token一致，则匹配成功
+            # 注意：我们在注册时用face_token作为user_id存储
+            is_match = matched_user_id == stored_face_token or matched_face_token == stored_face_token
+
+            return FaceVerificationResult(
+                similarity=search_result.get("similarity", 0.0),
+                is_match=is_match
+            )
+
+        except FaceServiceError:
+            raise
+        except Exception as exc:
+            print(f"[人脸比对] 异常: {exc}")
+            import traceback
+            traceback.print_exc()
+            raise FaceServiceError("人脸特征比对失败，请稍后重试。") from exc
 
 
 def resolve_landmark_model_path(config_mapping: dict[str, Any]) -> str:
