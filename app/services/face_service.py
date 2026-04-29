@@ -180,6 +180,7 @@ class FaceVerificationService:
         注意事项：
             使用百度云faceverify API专门进行活体检测，
             接口地址: https://aip.baidubce.com/rest/2.0/face/v3/faceverify
+            注意：请求参数必须是数组格式！
         """
         try:
             # 获取access_token
@@ -202,18 +203,22 @@ class FaceVerificationService:
             image_base64 = base64.b64encode(image_bytes).decode('utf-8')
             print(f"[活体检测] 图像base64长度: {len(image_base64)}")
 
-            # 调用faceverify接口
+            # 调用faceverify接口 - 注意：参数必须是数组格式！
             url = f"https://aip.baidubce.com/rest/2.0/face/v3/faceverify"
-            payload = {
-                "image": image_base64,
-                "image_type": "BASE64",
-                "face_field": "quality,liveness",
-            }
+            # 百度云faceverify接口要求参数是数组格式，每个元素包含image和image_type
+            payload = [
+                {
+                    "image": image_base64,
+                    "image_type": "BASE64",
+                    "face_field": "quality,liveness",
+                }
+            ]
             params = {"access_token": access_token}
             headers = {"Content-Type": "application/json"}
 
             print(f"[活体检测] 请求URL: {url}")
-            print(f"[活体检测] payload字段: image_type={payload['image_type']}, face_field={payload['face_field']}")
+            print(f"[活体检测] payload格式: 数组，包含1个元素")
+            print(f"[活体检测] payload内容: image_type=BASE64, face_field=quality,liveness")
 
             response = requests.post(url, json=payload, params=params, headers=headers, timeout=20)
             result = response.json()
